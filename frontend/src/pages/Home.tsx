@@ -1,16 +1,27 @@
 import React from 'react';
+import Header from '../components/Header'
+import ConnectButton from '../components/ConnectButton'
 
 export default function Home() {
+
+    const handleConnect = async () => {
+        console.log("Connecting to Xero")
+
+        try {
+            window.location.href = "http://localhost:8000/login"
+        } catch (error) {
+            console.log("Failed to connect to Xero: ", error);
+        }
+        
+
+    }
+
     return (
-        <div className="min-h-screen bg-gray-100 flex  items-center justify-center">
-            <div className="bg-white p-8 rounded shadow text-center">
-                <h1 className="text-2xl font-bold mb-4">Xero-ZRA Integration</h1>
-                <a
-                    href="http://localhost:8000/login"
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-                >
-                    Connect to Xero
-                </a>
+        <div>
+            <Header />
+            <div className="home-container">
+                <h1>Xero-ZRA Integration</h1>
+                <ConnectButton onClick={handleConnect} />
             </div>
         </div>
     );

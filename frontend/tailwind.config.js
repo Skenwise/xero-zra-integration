@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').config} */
+/** @type {import('tailwindcss').Config} */
 
 module.exports = {
     content: [
@@ -6,7 +6,7 @@ module.exports = {
     ],
 
     theme: {
-        extends: {},
+        extend: {},
     }, 
     plugins: [],
 }

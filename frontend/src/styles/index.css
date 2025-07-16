@@ -1,0 +1,105 @@
+/* CSS base class for our react Project */
+
+/* Browser default layout */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Base Body style */
+body {
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f9fafb;
+    color: #111827;
+    line-height: 1.6;
+}
+
+/* LINK STYLING */
+
+a {
+    color: #2563eb;
+    text-decoration: None;
+}
+ a:hover {
+    text-decoration: underline;
+ }
+
+ /* HEADINGS */
+ h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    color: #111;
+    margin-bottom: 0.5rem;
+ }
+
+ /* CONTAINER */
+ .container {
+    width: 100%;
+    max-width: 1280px;
+    padding: 0 1rem;
+    margin: auto;
+ }
+
+ /* button styles */
+ .btn {
+    display: inline-block;
+    background-color: #2563eb;
+    color: white;
+    padding: 0.5rem 1.2rem;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: background-color 0.2s   ease-in-out;
+ }
+
+ .btn:hover {
+    background-color: #1e40af
+ }
+
+ /* FLEX + CENTERING */
+ .flex {
+    display: flex;
+ }
+
+ .center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+ }
+
+ /* CARD LAYOUT */
+ .card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    padding: 1.5rem;
+    margin: 1rem 0;
+ }
+
+ /* SPACE UNIT */
+.mt-1 {margin-top: 0.25rem;}
+.mt-2 {margin-top: 0.5rem;}
+.mt-4 {margin-top: 1rem;}
+.mt-8 {margin-top: 2rem;}
+
+.mb-2 {margin-bottom: 0.5rem;}
+.mb-4 {margin-bottom: 1rem;}
+
+.p-2 {padding: 0.25rem;}
+.p-4 {padding: 1rem;}
+.p-6 {padding: 1.5rem;}
+.p-8 {padding: 2rem;}
+
+/* TEXT UNIT */
+.text-center {
+    text-align: center;
+}
+
+.text-sm {font-size: 0.875rem}
+.text-lg {font-size: 1.125rem}
+.text-xl {font-size: 1.25rem}
