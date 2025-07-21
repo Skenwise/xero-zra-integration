@@ -1,13 +1,16 @@
-// Header React Components
-
 import React from 'react';
 import '../App.css'
 
-export default function Header () {
+interface HeaderProps {
+    title: string;
+    subtitle: string;
+}
+
+export default function Header ({title, subtitle}: HeaderProps) {
     return (
         <header className="Header">
-            <h1 className="Header-title"> Xero-ZRA integration</h1>
-            <p className="header-subtitle"> Seamlessly Sync your invoices with ZRA</p>
+            <h1 className="Header-title">{title}</h1>
+            {subtitle && <p className="header-subtitles">{subtitle}</p>}
         </header>
     )
 }

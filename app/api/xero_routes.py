@@ -1,9 +1,10 @@
-# necessary import 
+# necessary import
 import uuid, json
 from urllib3.response import HTTPResponse
+import httpx
 
 # core fastAPI import
-from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request
+from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request, Header
 from fastapi.responses import RedirectResponse
 
 # xero python SDK
@@ -34,6 +35,8 @@ CLIENT_ID = settings.XERO_CLIENT_ID
 CLIENT_SECRET = settings.XERO_CLIENT_SECRET
 REDIRECT_URI = settings.XERO_REDIRECT_URI
 
+XERO_CONNECTIONS_URL = "https://api.xero.com/connections"
+
 # helper function to initiate oauth2
 def get_xero_api_client():
     if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
@@ -51,6 +54,19 @@ def get_xero_api_client():
     )
 
     return ApiClient(config)
+
+async def get_connections(access_token: str):
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(XERO_CONNECTIONS_URL, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"Error fetching connections: {response.text}")
+
 # Login endpoint
 @router.get("/login")
 async def login(request: Request, session: SessionContext = Depends(get_session)):
@@ -186,7 +202,27 @@ async def dashboard(session: SessionContext = Depends(get_session)):
         token_set = None
     if token_set:
         print("TOken set found in session")
-        return {"message": "Successfully connected to Xero!", "token_status": "Tokens present", "access_token_start": token_set['access_token'][:10]+ '...'}
+        return RedirectResponse(url="http://localhost:3000/dashboard")
     else:
         print("TOken set not found in session")
         return {"message": "Not connected to Xero. Please visit/login."}    
+
+@router.get("/xero/connections")
+async def fetch_connections(session: SessionContext = Depends(get_session)):
+    session_data = await session.manager.get_session(session.session_id)
+    if not session_data:
+        raise HTTPException(status_code=401, detail="No active session")
+
+    token_set = session_data.get("token_set")
+    if not token_set:
+        raise HTTPException(status_code=401, detail="No Xero token found. Please login again")
+
+    access_token = token_set.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Invalid token data")
+
+    try:
+        connections = await get_connections(access_token)
+        return {"connections": connections}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
