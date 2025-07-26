@@ -1,7 +1,7 @@
 # necessary import
 import uuid, json
 from urllib3.response import HTTPResponse
-import httpx
+from typing import List, Dict, Any, Optional
 
 # core fastAPI import
 from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request, Header
@@ -20,52 +20,18 @@ from xero_python.exceptions import OAuth2InvalidGrantError
 # import session
 from app.core.session import get_session, SessionContext
 from app.core.config import get_settings
+from app.utils.xero_auth import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, SCOPES
+from app.utils.xero_auth import get_xero_api_client, get_connections, get_access_token, fetch_tenant_id_data   
+from app.services.xero_service import get_invoices, create_invoice, get_invoice_by_id, update_invoice, delete_invoice
+from app.services.xero_service import create_contact, get_all_contacts, get_contact_by_id, update_contact, delete_contact
+from app.services.xero_service import create_payment, get_all_payments, get_payment_by_id, delete_payment
+from app.services.xero_service import create_credit_note, get_all_credit_notes, get_credit_note_by_id, update_credit_note, delete_credit_note
+from app.services.xero_service import create_bank_transaction, get_all_bank_transactions, get_bank_transaction_by_id, update_bank_transaction, delete_bank_transaction
+from app.services.xero_service import get_accounts, get_journal, get_report
+from app.utils.utility_function import api_endpoint_call
 
 router = APIRouter()
 settings = get_settings()
-
-# xero Oauth scope to define what is allowed
-SCOPES = [
-    "openid", "profile", "email",
-    "accounting.transactions", "accounting.contacts", "offline_access",
-]
-
-# declaring our environment variable
-CLIENT_ID = settings.XERO_CLIENT_ID
-CLIENT_SECRET = settings.XERO_CLIENT_SECRET
-REDIRECT_URI = settings.XERO_REDIRECT_URI
-
-XERO_CONNECTIONS_URL = "https://api.xero.com/connections"
-
-# helper function to initiate oauth2
-def get_xero_api_client():
-    if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
-        raise HTTPException(
-            status_code =  500,
-                detail = "Xero API credentials (CLIENT_ID, CLIENT_SECRET, REDIRECT_URI) must be set as environment variables."
-        )
-    oauth2_token_instance = OAuth2Token(
-        client_id = CLIENT_ID,
-        client_secret = CLIENT_SECRET
-    )
-
-    config = Configuration(
-        oauth2_token = oauth2_token_instance,
-    )
-
-    return ApiClient(config)
-
-async def get_connections(access_token: str):
-    headers = {
-        "Authorization": f"Bearer {access_token}"
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.get(XERO_CONNECTIONS_URL, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise Exception(f"Error fetching connections: {response.text}")
 
 # Login endpoint
 @router.get("/login")
@@ -207,22 +173,157 @@ async def dashboard(session: SessionContext = Depends(get_session)):
         print("TOken set not found in session")
         return {"message": "Not connected to Xero. Please visit/login."}    
 
+#Xero API connection
 @router.get("/xero/connections")
 async def fetch_connections(session: SessionContext = Depends(get_session)):
-    session_data = await session.manager.get_session(session.session_id)
-    if not session_data:
-        raise HTTPException(status_code=401, detail="No active session")
-
-    token_set = session_data.get("token_set")
-    if not token_set:
-        raise HTTPException(status_code=401, detail="No Xero token found. Please login again")
-
-    access_token = token_set.get("access_token")
-    if not access_token:
-        raise HTTPException(status_code=401, detail="Invalid token data")
+    access_token = await get_access_token(session)
 
     try:
         connections = await get_connections(access_token)
         return {"connections": connections}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+#Xero Invoices API endpoints
+@router.get("/xero/invoices")
+async def fetch_xero_invoices(session: SessionContext = Depends(get_session), status: str=Query("AUTHORIZED")):
+    return await get_invoices(session, status=status)
+
+@router.post("/xero/invoices")
+async def create_invoice_endpoint(request: Request, session: SessionContext = Depends(get_session)):
+    try:
+        invoice_data = await request.json()
+        return await create_invoice(session, invoice_data)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/xero/invoices/{invoice_id}")
+async def get_invoice_by_id_endpoint(invoice_id: str, session: SessionContext = Depends(get_session)):
+    return await  get_invoice_by_id(session, invoice_id)
+
+@router.put("xero/invoices/{invoice_id}")
+async def update_invoice_endpoint(invoice_id: str, update_data: dict, request: Request, session: SessionContext = Depends(get_session)):
+    try:
+        update_data = await request.json()
+        return await update_invoice(session, invoice_id, update_data)
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.delete("/xero/invoices/{invoice_id}")
+async def delete_invoice_endpoint(invoice_id: str,  session: SessionContext = Depends(get_session)):
+    try:
+        result = await delete_invoice(session, invoice_id)
+        return result
+    except Exception as e:
+       raise HTTPException(status_code=500, detail=str(e))
+
+#Xero contact API endpoints   
+@router.post("/xero/contacts")
+async def create_contact_endpoint(request: Request, session: SessionContext = Depends(get_session)):
+    try:
+        contact_data = await request.json()
+        result = await create_contact(session, contact_data)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/xero/contacts")
+async def get_all_contact_endoind(name: Optional[str]=None, session: SessionContext = Depends(get_session)):
+    return await get_all_contacts(session, name)
+
+@router.get("/xero/contacts/{contact_id}")
+async def get_contact_by_id_endpoint(contact_id: str, session: SessionContext = Depends(get_session)):
+    return await get_contact_by_id(session, contact_id)
+
+@router.put("/xero/contacts/{contact_id}")
+async def update_contact_endpoint( contact_id: str, request: Request, session: SessionContext=Depends(get_session)):
+    try:
+        update_data = await request.json()
+        return await update_contact(session, contact_id, update_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.delete("/xero/contacts/{contact_id}")
+async def delete_contact_endpoint(contact_id: str, session: SessionContext=Depends(get_session)):
+    return await api_endpoint_call(delete_contact, session, contact_id)
+    
+# Xero payement API endppoint
+@router.post("/xero/payments")
+async def create_payment_endpoint(request: Request, session: SessionContext=Depends(get_session)):
+    payment_data = await request.json()
+    return await api_endpoint_call(create_payment, session, payment_data)
+
+@router.get("/xero/payments")
+async def get_all_payments_endpoints(session: SessionContext=Depends(get_session), invoice_id: Optional[str]=None):
+    return await get_all_payments(session, invoice_id)
+
+@router.get("/xero/payments/{payment_id}")
+async def get_payment_by_id_endpoint(payment_id: str, session: SessionContext=Depends(get_session)):
+    return await get_payment_by_id(session, payment_id)
+
+@router.delete("/xero/payments/{payment_id}")
+async def delete_payment_endpoint(payment_id: str, session: SessionContext=Depends(get_session)):
+    return await api_endpoint_call(delete_payment, session, payment_id)
+
+#Xero credit note API endpoint
+@router.post("/xero/creditnotes")
+async def create_credit_note_endpoint(request: Request, session: SessionContext=Depends(get_session)):
+    credit_note_data = await request.json()
+    return await api_endpoint_call(create_credit_note, session, credit_note_data)
+
+@router.get("/xero/creditnotes")
+async def get_all_credit_notes_endpoint(session: SessionContext=Depends(get_session), status: Optional[str]=None):
+    return await get_all_credit_notes(session, status)
+
+@router.get("/xero/creditnotes/{credit_note_id}")
+async def get_credit_note_by_id_endpoint(credit_note_id: str, session: SessionContext=Depends(get_session)):
+    return await get_credit_note_by_id(session, credit_note_id)
+
+@router.put("/xero/creditnotes/{credit_note_id}")
+async def update_credit_note_endpoint(credit_note_id: str, request: Request, session: SessionContext=Depends(get_session)):
+    update_data = await request.json()
+    return await api_endpoint_call(update_credit_note, session, credit_note_id, update_data)
+
+@router.delete("/xero/creditnotes/{credit_note_id}")
+async def delete_credit_note_endpoint(credit_note_id: str, session: SessionContext=Depends(get_session)):
+    return await api_endpoint_call(delete_credit_note, session, credit_note_id)
+
+# Xero bank transaction API endpoint
+@router.post("/xero/banktransactions")
+async def create_bank_transaction_endpoint(request: Request, session: SessionContext=Depends(get_session)):
+    bank_transaction_data = request.json()
+    return await api_endpoint_call(create_bank_transaction, session, bank_transaction_data)
+
+@router.get("/xero/banktransactions")
+async def get_all_bank_transactions_endpoint(session: SessionContext=Depends(get_session), status: Optional[str]=None):
+    return await get_all_bank_transactions(session, status)
+
+@router.get("/xero/banktransactions/{bank_transaction_id}")
+async def get_bank_transaction_by_id_endpoint(bank_transaction_id: str, session: SessionContext=Depends(get_session)):
+    return await get_bank_transaction_by_id(session, bank_transaction_id)
+
+@router.put("/xero/banktransactions/{bank_transaction_id}")
+async def update_bank_transaction_endpoint(bank_transaction_id: str, request: Request, session: SessionContext=Depends(get_session)):
+    updated_data = request.json()
+    return await api_endpoint_call(update_bank_transaction, session, bank_transaction_id, updated_data)
+
+@router.delete("/xero/banktransactions/{bank_transaction_id}")
+async def delete_bank_transaction_endpoint(bank_transaction_id: str, session: SessionContext=Depends(get_session)):
+    return await api_endpoint_call(delete_bank_transaction, session, bank_transaction_id)
+
+# Xero Account API Endpoint
+@router.get("/xero/accounts")
+async def get_account_endpoint(session: SessionContext=Depends(get_session), status: Optional[str]=None):
+    return await get_accounts(session, status) 
+
+# Xero journal API Endpoint
+@router.get("/xero/journals")
+async def get_journal_endpoint(session: SessionContext=Depends(get_session), offset: int = Query(0, description="Offset for paginated journal entries")):
+    return await get_journal(session, offset) 
+
+# Xero report API endpoint
+@router.get("/xero/reports/{report_type}")
+async def get_report_endpoint(report_type: str, session: SessionContext=Depends(get_session), from_date: Optional[str]=None, to_date: Optional[str]=None):
+    return await get_report(session, report_type, from_date, to_date) 
