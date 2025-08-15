@@ -1,11 +1,10 @@
-import React from 'react';
 import Sidebar from "../components/Sidebar";
 import Navbar from '../components/Navbar';
 import DashboardHeader from '../components/DashboardHeader';
 import DashboardTable from '../components/DashboardTable';
 import KpiCard from '../components/KpiCard';
 import Footer from '../components/Footer';
-import {Home, FileText, Settings, LogOut} from 'lucide-react';
+import {SidebarItems} from '../utils';
 
 export default function Dashboard() {
     const headers = ["Name", "Role", "Email", "Status"]
@@ -13,23 +12,6 @@ export default function Dashboard() {
     {Name: "Sage Kona", Role: "Developper", Email: "Sage.kona.dev@gmail.com", Status: "Active"},
     {Name: "Shawn Michaels", Role: "CEO", Email: "ShawnMichaels@gmail.com", Status: "Active"},
     {Name: "Mark Rubin", Role: "Analyst", Email: "KodackMusicCity@gmail.com", Status: "Active"}
-    ]
-
-    const SidebarItems = [
-      {label: "Home",
-        path: "/home",
-        icon: <Home size={20}/>
-      },
-      {
-        label: "Analytics",
-        path: "/analytics",
-        icon: <FileText size={20}/>
-      },
-      {
-        label: "Settings",
-        path: "/settings",
-        icon: <Settings size={20}/>
-      },
     ]
 
     return (

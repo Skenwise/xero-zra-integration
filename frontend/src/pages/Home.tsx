@@ -4,7 +4,6 @@ import ConnectButton from '../components/ConnectButton'
 import InfoBox from '../components/InfoBox';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
-import Alert from '../components/Alert';
 
 export default function Home() {
 

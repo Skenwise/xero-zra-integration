@@ -2,10 +2,11 @@
 import uuid, json
 from urllib3.response import HTTPResponse
 from typing import List, Dict, Any, Optional
+import traceback
 
 # core fastAPI import
 from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request, Header
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 
 # xero python SDK
 from xero_python.api_client.oauth2 import OAuth2Token
@@ -27,7 +28,7 @@ from app.services.xero_service import create_contact, get_all_contacts, get_cont
 from app.services.xero_service import create_payment, get_all_payments, get_payment_by_id, delete_payment
 from app.services.xero_service import create_credit_note, get_all_credit_notes, get_credit_note_by_id, update_credit_note, delete_credit_note
 from app.services.xero_service import create_bank_transaction, get_all_bank_transactions, get_bank_transaction_by_id, update_bank_transaction, delete_bank_transaction
-from app.services.xero_service import get_accounts, get_journal, get_report
+from app.services.xero_service import get_accounts, get_journal, get_report, get_identity, get_journal_by_id 
 from app.utils.utility_function import api_endpoint_call
 
 router = APIRouter()
@@ -74,16 +75,13 @@ async def oauth_callback(
         session: SessionContext = Depends(get_session)
 ):
     stored_state = await session.manager.get(session.session_id, "oauth_state")
-    print(f"DEBUG: current session state: {stored_state}")
 
     # security check the state parameter
-    print(f"DEBUG: This is the actual real state to compared to stored_state {state}")
     if stored_state is None or stored_state != state:
         raise HTTPException(
             status_code = 400,
             detail = "Invalid state parameter, Possible CSRF attack or session mismatch"
         )
-    print(f"DEBUG: state check passed")
     
     # prepare the data for token exchange 
     token_exchange_data = {
@@ -122,29 +120,23 @@ async def oauth_callback(
                 detail = f"Xero token exchange failed {error_json.get('error_description', error_json.get('error', 'Unknown error'))}"
             )
         
-        print(f"DEBUG: Token exchange set successflly (status 200)")
 
         # decode and parse the JSON response from Xero
         token_data = json.loads(token_response.data.decode("utf-8"))
-        print(f"DEBUG: token parsed data (keys only): {token_data.keys()}")
 
         # store the token in our session manager
-        print("Your code didn't go to except")
         await session.manager.update_session(session.session_id, "token_set", token_data)
 
         # Update the ApiClient's OAuth2Token instance with access token and refresh token
         xero_api_client.configuration.oauth2_token.update_token(**token_data) # type: ignore
-        print("DEBUG: ApiClient's OAuth2Token updated")
 
         # redirect to a success page Dashboard or Home page
-        print(f"DEBUG: redirect to dashoard")
         response = RedirectResponse(url="/dashboard", status_code=307)
         response.set_cookie("session_id", value=session.session_id, httponly=True)
         return response
     
     except OAuth2InvalidGrantError as e:
         # Catch specific Xero OAuth erros
-        print(f"DEBUG: OAuth2InvalidGrantError caught: {e.reason}")
         raise HTTPException(
             status_code=400,
             detail = f"Xero OAuth Error: Invalid Grant. Please try again. Detail: {e.reason}"
@@ -152,7 +144,6 @@ async def oauth_callback(
     
     except Exception as e:
         # catch any unexpected error during the process
-        print(f"DEBUG: Generic exception Exception caught in callback: {type(e).__name__}: {e}")
         raise HTTPException (
             status_code = 500,
             detail = f"An unexpected errors occured during Xero callback: {e}"
@@ -186,8 +177,12 @@ async def fetch_connections(session: SessionContext = Depends(get_session)):
 
 #Xero Invoices API endpoints
 @router.get("/xero/invoices")
-async def fetch_xero_invoices(session: SessionContext = Depends(get_session), status: str=Query("AUTHORIZED")):
-    return await get_invoices(session, status=status)
+async def fetch_xero_invoices(session: SessionContext = Depends(get_session), status: Optional[str]=None):
+    try:
+        return await get_invoices(session, status=status)
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @router.post("/xero/invoices")
 async def create_invoice_endpoint(request: Request, session: SessionContext = Depends(get_session)):
@@ -196,7 +191,9 @@ async def create_invoice_endpoint(request: Request, session: SessionContext = De
         return await create_invoice(session, invoice_data)
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        #raise HTTPException(status_code=500, detail=str(e))
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @router.get("/xero/invoices/{invoice_id}")
 async def get_invoice_by_id_endpoint(invoice_id: str, session: SessionContext = Depends(get_session)):
@@ -227,7 +224,8 @@ async def create_contact_endpoint(request: Request, session: SessionContext = De
         result = await create_contact(session, contact_data)
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
     
 @router.get("/xero/contacts")
 async def get_all_contact_endoind(name: Optional[str]=None, session: SessionContext = Depends(get_session)):
@@ -323,7 +321,24 @@ async def get_account_endpoint(session: SessionContext=Depends(get_session), sta
 async def get_journal_endpoint(session: SessionContext=Depends(get_session), offset: int = Query(0, description="Offset for paginated journal entries")):
     return await get_journal(session, offset) 
 
+@router.get("xero/journals/{journal_id}")
+async def get_journal_by_id_endpoint(journal_id: str ,session: SessionContext=Depends(get_session)):
+    try:
+        return await get_journal_by_id(session, journal_id)
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={'Error': str(e)})
+
 # Xero report API endpoint
 @router.get("/xero/reports/{report_type}")
 async def get_report_endpoint(report_type: str, session: SessionContext=Depends(get_session), from_date: Optional[str]=None, to_date: Optional[str]=None):
     return await get_report(session, report_type, from_date, to_date) 
+
+# Xero Identity API endpoint
+@router.get("/xero/identity", tags=["Idenitty"])
+async def identity_info(session: SessionContext=Depends(get_session)):
+    try:
+        return await get_identity(session)
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})

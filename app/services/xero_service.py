@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
 from app.core.session import SessionContext
-from app.utils.utility_function import api_request
+from app.utils.utility_function import api_request, XERO_IDENTITY_URL
 
 #invoice helper function
 async def get_invoices(session: SessionContext, status: Optional[str] = None):
@@ -139,6 +139,9 @@ async def get_journal(session: SessionContext, offset: int=0) -> dict:
     params = {"offset": offset}
     return await api_request(session, "journals", "get", params=params)
 
+async def get_journal_by_id(session: SessionContext, journal_id: str):
+    return await api_request(session, 'journals', "get", journal_id)
+
 # report helper function
 async def get_report(session: SessionContext, report_type: str, from_date: Optional[str]=None, to_date: Optional[str]=None):
     params = {}
@@ -148,3 +151,7 @@ async def get_report(session: SessionContext, report_type: str, from_date: Optio
         params["toDate"] = to_date 
 
     return await api_request(session, "reports", "get", report_type, params=params)   
+
+# identityAPI function
+async def get_identity(session: SessionContext) -> dict:
+    return await api_request(session, "Connections", "get", base_url=XERO_IDENTITY_URL)
