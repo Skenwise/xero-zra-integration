@@ -12,7 +12,7 @@ if not redis_url:
     raise RuntimeError("REDIS_URL environment is not set")
 
  
-redis_client = Redis.from_url(redis_url, decode_response=True)
+redis_client = Redis.from_url(redis_url, decode_responses=True)
 
 # setting up redis 
 session_manager = RedisSessionManager(redis_client)
