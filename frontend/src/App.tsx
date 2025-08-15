@@ -1,6 +1,5 @@
-import {BrowserRouter as Router, Route, Routes} from 'react-router-dom';
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
+import {BrowserRouter as Router, Route, Routes} from 'react-router-dom'; 
+import Home from './pages/Home'; import Dashboard from './pages/Dashboard'; 
 import Accounting from './pages/Accounting';
 import AccountingReport from './pages/AccountingReport';
 import JournalDetailPages from './pages/JournalDetailPages';

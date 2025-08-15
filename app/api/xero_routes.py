@@ -57,7 +57,7 @@ async def login(request: Request, session: SessionContext = Depends(get_session)
     print(f"DEBUG: Generated Xero Authorization URL: {authorization_url}")
 
     response = RedirectResponse(authorization_url)
-    response.set_cookie(key="session_id", value=session.session_id, httponly=True)
+    response.set_cookie(key="session_id", value=session.session_id, httponly=True, secure=True, samesite="lax")
 
     return response
 

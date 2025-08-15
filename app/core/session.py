@@ -1,11 +1,20 @@
 import uuid
+import os
 from redis.asyncio import Redis
 from starlette.requests import Request
 
 from app.core.redis_client import RedisSessionManager
 
+redis_url= os.getenv("REDIS_URL")
+
+if redis_url is None:
+    print("redis URL is not set")
+    raise RuntimeError("REDIS_URL environment is not set")
+
+else: 
+    redis_client = Redis.from_url(redis_url, decode_response=True)
+
 # setting up redis 
-redis_client: Redis = Redis(host="localhost", port=6379, decode_responses=True)
 session_manager = RedisSessionManager(redis_client)
 
 # session context

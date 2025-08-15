@@ -1,6 +1,13 @@
+import os
 from typing import Optional, Dict, Any
 import json
 from redis.asyncio import Redis
+
+redis_url= os.getenv("REDIS_URL")
+
+if redis_url is None:
+    print("redis URL is not set")
+else: redis_client = Redis.from_url(redis_url)
 
 class RedisSessionManager:
     def __init__(self, redis: Redis, prefix: str = "Session:"):
@@ -37,3 +44,5 @@ class RedisSessionManager:
     
     async def set(self, session_id, key: str, value: Any):
         await self.update_session(session_id, key, value)
+
+session_manager = RedisSessionManager(redis_client)

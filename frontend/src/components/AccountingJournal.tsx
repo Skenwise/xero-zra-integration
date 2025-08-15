@@ -49,7 +49,7 @@ export default function Journals() {
 
   const handleRowClick = (entry: Journal) => {
     alert(`🔎 Coming soon: View details for ${entry.JournalID}`);
-    navigate(`accounting/records/journal/${entry.JournalID}`) 
+    navigate(`/accounting/records/journal/${entry.JournalID}`) 
   };
 
   return (

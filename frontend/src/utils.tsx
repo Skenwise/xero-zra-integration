@@ -225,7 +225,7 @@ export function useAPIData<T> (url: string, datakey?: string) {
 }
 
 export function useAPIDataJournal(JournalID: string) {
-  const {data: journalsArray, loading, error} = useAPIData(`http://localhost:8000/xeor/journals/${JournalID}`, 'Journals')
+  const {data: journalsArray, loading, error} = useAPIData(`http://localhost:8000/xero/journals/${JournalID}`, 'Journals')
 
   if (loading) {
     return {journal: null, loading: true, error: null}
