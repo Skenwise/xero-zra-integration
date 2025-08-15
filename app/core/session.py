@@ -7,12 +7,12 @@ from app.core.redis_client import RedisSessionManager
 
 redis_url= os.getenv("REDIS_URL")
 
-if redis_url is None:
+if not redis_url:
     print("redis URL is not set")
     raise RuntimeError("REDIS_URL environment is not set")
 
-else: 
-    redis_client = Redis.from_url(redis_url, decode_response=True)
+ 
+redis_client = Redis.from_url(redis_url, decode_response=True)
 
 # setting up redis 
 session_manager = RedisSessionManager(redis_client)
