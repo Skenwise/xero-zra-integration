@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import JournalDetails from '../components/JournalDetails';
 import Footer from '../components/Footer'; import {SidebarItems} from '../utils'; import {useAPIDataJournal} from '../utils'; import {useParams} from 'react-router-dom'; export default function Details () {
 const {JournalID} = useParams<{JournalID: string}>();
+
 const {journal, loading, error} = useAPIDataJournal(JournalID || '');
 
 if (!JournalID) {

@@ -159,7 +159,7 @@ async def dashboard(session: SessionContext = Depends(get_session)):
         token_set = None
     if token_set:
         print("TOken set found in session")
-        return RedirectResponse(url="http://localhost:3000/dashboard")
+        return RedirectResponse(url="https://xero-zra-integration.vercel.app/dashboard")
     else:
         print("TOken set not found in session")
         return {"message": "Not connected to Xero. Please visit/login."}    
