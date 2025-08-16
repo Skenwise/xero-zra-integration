@@ -11,7 +11,7 @@ export default function Home() {
         console.log("Connecting to Xero")
 
         try {
-            window.location.href = "http://localhost:8000/login"
+            window.location.href = "https://xero-zra-integration-3.onrender.com/login"
         } catch (error) {
             console.log("Failed to connect to Xero: ", error);
         }
