@@ -3,6 +3,7 @@ import uuid, json, base64
 from urllib3.response import HTTPResponse
 from typing import List, Dict, Any, Optional
 import traceback
+import urllib.parse
 
 # core fastAPI import
 from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request, Header
@@ -92,6 +93,7 @@ async def oauth_callback(
 
     # create a basic auth header
     basic_auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
+    form_data = urllib.parse.urlencode(token_exchange_data).encode('utf-8')
 
     xero_api_client = get_xero_api_client()
 
@@ -107,9 +109,10 @@ async def oauth_callback(
             header_params= {
                 "Accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": f"Basic {basic_auth}"
+                "Authorization": f"Basic {basic_auth}",
+                "User-Agent": "YourApp/1.0"
             },
-            post_params = token_exchange_data,
+            body=form_data,
             auth_settings=None,
             _preload_content=False
         )
@@ -201,7 +204,7 @@ async def create_invoice_endpoint(request: Request, session: SessionContext = De
 async def get_invoice_by_id_endpoint(invoice_id: str, session: SessionContext = Depends(get_session)):
     return await  get_invoice_by_id(session, invoice_id)
 
-@router.put("xero/invoices/{invoice_id}")
+@router.put("/xero/invoices/{invoice_id}")
 async def update_invoice_endpoint(invoice_id: str, update_data: dict, request: Request, session: SessionContext = Depends(get_session)):
     try:
         update_data = await request.json()
@@ -293,7 +296,7 @@ async def delete_credit_note_endpoint(credit_note_id: str, session: SessionConte
 # Xero bank transaction API endpoint
 @router.post("/xero/banktransactions")
 async def create_bank_transaction_endpoint(request: Request, session: SessionContext=Depends(get_session)):
-    bank_transaction_data = request.json()
+    bank_transaction_data = await request.json()
     return await api_endpoint_call(create_bank_transaction, session, bank_transaction_data)
 
 @router.get("/xero/banktransactions")
@@ -306,7 +309,7 @@ async def get_bank_transaction_by_id_endpoint(bank_transaction_id: str, session:
 
 @router.put("/xero/banktransactions/{bank_transaction_id}")
 async def update_bank_transaction_endpoint(bank_transaction_id: str, request: Request, session: SessionContext=Depends(get_session)):
-    updated_data = request.json()
+    updated_data = await request.json()
     return await api_endpoint_call(update_bank_transaction, session, bank_transaction_id, updated_data)
 
 @router.delete("/xero/banktransactions/{bank_transaction_id}")
@@ -323,7 +326,7 @@ async def get_account_endpoint(session: SessionContext=Depends(get_session), sta
 async def get_journal_endpoint(session: SessionContext=Depends(get_session), offset: int = Query(0, description="Offset for paginated journal entries")):
     return await get_journal(session, offset) 
 
-@router.get("xero/journals/{journal_id}")
+@router.get("/xero/journals/{journal_id}")
 async def get_journal_by_id_endpoint(journal_id: str ,session: SessionContext=Depends(get_session)):
     try:
         return await get_journal_by_id(session, journal_id)
