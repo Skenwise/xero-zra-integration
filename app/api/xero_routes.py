@@ -91,7 +91,7 @@ async def oauth_callback(
     }
 
     # create a basic auth header
-    basic_auth = base64.b64encode(f"{CLIENT_ID}: {CLIENT_SECRET}".encode()).decode()
+    basic_auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
 
     xero_api_client = get_xero_api_client()
 
