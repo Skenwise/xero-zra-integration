@@ -106,7 +106,7 @@ async def oauth_callback(
             "POST",
             header_params= {
                 "Accept": "application/json",
-                "Content-Type": "application/x-www-form-urlencoded"
+                "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": f"Basic {basic_auth}"
             },
             post_params = token_exchange_data,
