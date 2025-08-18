@@ -1,6 +1,8 @@
 import {Home, FileText, Settings} from 'lucide-react';
 import {useState, useEffect} from 'react';
 
+export const API_URL = "https://xero-zra-integration-3.onrender.com";
+
 export const SidebarItems = [
     {label: "Home",
     path: "/dashboard",
@@ -225,7 +227,7 @@ export function useAPIData<T> (url: string, datakey?: string) {
 }
 
 export function useAPIDataJournal(JournalID: string) {
-  const {data: journalsArray, loading, error} = useAPIData(`http://localhost:8000/xero/journals/${JournalID}`, 'Journals')
+  const {data: journalsArray, loading, error} = useAPIData(`${API_URL}/xero/journals/${JournalID}`, 'Journals')
 
   if (loading) {
     return {journal: null, loading: true, error: null}

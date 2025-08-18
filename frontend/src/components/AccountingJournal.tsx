@@ -6,6 +6,7 @@ import {formatXeroDate} from '../utils';
 import {journalsField} from '../utils';
 import {processJournalData} from '../utils';
 import {useNavigate} from 'react-router-dom';
+import {API_URL} from '../utils';
 
 interface JournalLine {
   JournalLineID: string;
@@ -43,7 +44,7 @@ interface JournalsResponse {
 
 export default function Journals() {
 
-  const {data:entries, loading, error } = useAPIData<JournalsResponse>('http://localhost:8000/xero/journals', 'Journals')
+  const {data:entries, loading, error } = useAPIData<JournalsResponse>(`${API_URL}/xero/journals`, 'Journals')
   const [modalOpen, setModalOpen] = useState(false);
   const navigate = useNavigate()
 
@@ -100,11 +101,11 @@ export default function Journals() {
     </div>
       {modalOpen && 
     <CreateItemModel
-      title = "Create New Contact"
+      title = "Create New Journal"
       fields = {journalsField}
-      apiEndpoint = "http://localhost:8000/xero/journals"
+      apiEndpoint = `${API_URL}/xero/journals`
       onSubmit={(formData)=> {
-        console.log("Contact Created: ", formData)}
+        console.log("Journal Created: ", formData)}
       }
       onClose={()=> setModalOpen(false)}
       dataProcessor={processJournalData}

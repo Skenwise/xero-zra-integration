@@ -1,5 +1,5 @@
 # necessary import
-import uuid, json
+import uuid, json, base64
 from urllib3.response import HTTPResponse
 from typing import List, Dict, Any, Optional
 import traceback
@@ -88,9 +88,10 @@ async def oauth_callback(
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": REDIRECT_URI,
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
     }
+
+    # create a basic auth header
+    basic_auth = base64.b64encode(f"{CLIENT_ID}: {CLIENT_SECRET}".encode()).decode()
 
     xero_api_client = get_xero_api_client()
 
@@ -106,6 +107,7 @@ async def oauth_callback(
             header_params= {
                 "Accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded"
+                "Authorization": f"Basic {basic_auth}"
             },
             post_params = token_exchange_data,
             auth_settings=None,
