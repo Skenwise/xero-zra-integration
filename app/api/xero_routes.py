@@ -4,6 +4,7 @@ from urllib3.response import HTTPResponse
 from typing import List, Dict, Any, Optional
 import traceback
 import urllib.parse
+import httpx
 
 # core fastAPI import
 from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request, Header
@@ -83,77 +84,66 @@ async def oauth_callback(
             status_code = 400,
             detail = "Invalid state parameter, Possible CSRF attack or session mismatch"
         )
-    
-    # prepare the data for token exchange 
-    token_exchange_data = {
+
+    token_url="https://identity.xero.com/connect/token"
+    data = {
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": REDIRECT_URI,
+        "redirect_uri": REDIRECT_URI
     }
 
-    # create a basic auth header
-    basic_auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
-    form_data = urllib.parse.urlencode(token_exchange_data).encode('utf-8')
+    assert CLIENT_ID is not None and CLIENT_SECRET is not None
 
-    xero_api_client = get_xero_api_client()
+    try: 
+        async with httpx.AsyncClient(timeout=30) as client:
+            token_response = await client.post(
+                token_url,
+                data=data,
+                auth=(CLIENT_ID, CLIENT_SECRET),
+                headers = {
+                    "Accept": "application/json",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent": "XeroIntegration/1.0"
+                }
+            )
 
-    # Exchange authorization code with access and refresh token
-    # Raw POST request using api_client.call_api
-    # The URL is xero's Token endpoint
+        if token_response.status_code != 200:
+            error_body = token_response.text
+            try:
+                error_json = token_response.json()
+                error_msg = error_json.get('error_description', error_json.get('error', 'Unknown error'))
+            except:
+                error_msg = error_body
 
-    try:
-        token_response: HTTPResponse
-        token_response, status_code, headers = xero_api_client.call_api( # type: ignore
-            "https://identity.xero.com/connect/token",
-            "POST",
-            header_params= {
-                "Accept": "application/json",
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": f"Basic {basic_auth}",
-                "User-Agent": "YourApp/1.0"
-            },
-            body=form_data,
-            auth_settings=None,
-            _preload_content=False
-        )
-
-        if status_code != 200:
-            error_detail = token_response.data.decode("utf-8")
-            error_json = json.loads(error_detail)
-            raise HTTPException (
-                status_code = int(status_code),
-                detail = f"Xero token exchange failed {error_json.get('error_description', error_json.get('error', 'Unknown error'))}"
+            raise HTTPException(
+                status_code = token_response.status_code,
+                detail=f"Xero token exchange failed ({token_response.status_code}): {error_msg}"
             )
         
+        token_data = token_response.json()
 
-        # decode and parse the JSON response from Xero
-        token_data = json.loads(token_response.data.decode("utf-8"))
-
-        # store the token in our session manager
         await session.manager.update_session(session.session_id, "token_set", token_data)
 
-        # Update the ApiClient's OAuth2Token instance with access token and refresh token
-        xero_api_client.configuration.oauth2_token.update_token(**token_data) # type: ignore
+        xero_api_client = get_xero_api_client()
+        if xero_api_client.configuration.oauth2_token is None:
+            xero_api_client.configuration.oauth2_token = OAuth2Token(**token_data)
+        else:
+            xero_api_client.configuration.oauth2_token.update_token(**token_data)
 
-        # redirect to a success page Dashboard or Home page
-        response = RedirectResponse(url="/dashboard", status_code=307)
-        response.set_cookie("session_id", value=session.session_id, httponly=True)
-        return response
+        redirect_response = RedirectResponse(url="/dashboard", status_code=307)
+        redirect_response.set_cookie("session_id", value=session.session_id, httponly=True)
+        return redirect_response
     
-    except OAuth2InvalidGrantError as e:
-        # Catch specific Xero OAuth erros
-        raise HTTPException(
-            status_code=400,
-            detail = f"Xero OAuth Error: Invalid Grant. Please try again. Detail: {e.reason}"
-        )
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"Network error during token exchange: {str(e)}")
     
     except Exception as e:
-        # catch any unexpected error during the process
-        raise HTTPException (
-            status_code = 500,
-            detail = f"An unexpected errors occured during Xero callback: {e}"
+        raise HTTPException(
+            status_code=500,
+            detail=f"An unexpected error occurred during Xero callback: {str(e)}"
         )
-    
+
+   
 # Dashboard endpoint
 @router.get("/dashboard")
 async def dashboard(session: SessionContext = Depends(get_session)):
