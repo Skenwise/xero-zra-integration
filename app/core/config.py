@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     XERO_REDIRECT_URI: Optional[str] = None
 
     class Config:
-        env_file = ".env"
+        env_file = "/home/skenwise/Desktop/Project/xero-zra-integration/.env"
         env_file_encoding = 'utf-8'
         case_sensitive = True
 

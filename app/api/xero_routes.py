@@ -23,7 +23,7 @@ from xero_python.exceptions import OAuth2InvalidGrantError
 # import session
 from app.core.session import get_session, SessionContext
 from app.core.config import get_settings
-from app.utils.xero_auth import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, SCOPES
+from app.utils.xero_auth import CLIENT_ID, CLIENT_SECRET, SCOPES
 from app.utils.xero_auth import get_xero_api_client, get_connections, get_access_token, fetch_tenant_id_data   
 from app.services.xero_service import get_invoices, create_invoice, get_invoice_by_id, update_invoice, delete_invoice
 from app.services.xero_service import create_contact, get_all_contacts, get_contact_by_id, update_contact, delete_contact
@@ -35,6 +35,8 @@ from app.utils.utility_function import api_endpoint_call
 
 router = APIRouter()
 settings = get_settings()
+REDIRECT_URI="https://7ad79eaf5978.ngrok-free.app/callback"
+print(REDIRECT_URI)
 
 # Login endpoint
 @router.get("/login")
@@ -76,6 +78,7 @@ async def oauth_callback(
         state: str = Query(..., description="state parameter for CSRF protection"),
         session: SessionContext = Depends(get_session)
 ):
+    print(REDIRECT_URI)
     stored_state = await session.manager.get(session.session_id, "oauth_state")
 
     # security check the state parameter
