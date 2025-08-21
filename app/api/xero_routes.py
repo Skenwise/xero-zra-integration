@@ -340,3 +340,5 @@ async def identity_info(session: SessionContext=Depends(get_session)):
     except Exception as e:
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
+    
+Authorization = "Basic <base64(870744B2D93E44E7AD93466EED2AF06C:TGdO5Ums6JVURWXyGL9cOjWilu7gHEe36HUxCBZ7hI0RfYdB)"
