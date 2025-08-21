@@ -95,7 +95,7 @@ async def oauth_callback(
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0 (compatible; XeroIntegration/1.0; +https://xero.com)"
+        "User-Agent": "kabert-zra-integration/1.0"
     }
 
     assert CLIENT_ID is not None and CLIENT_SECRET is not None
