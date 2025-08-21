@@ -89,23 +89,26 @@ async def oauth_callback(
     data = {
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": REDIRECT_URI
+        "redirect_uri": REDIRECT_URI,
+        "scope": " ".join(SCOPES)
+    }
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (compatible; XeroIntegration/1.0; +https://xero.com)"
     }
 
     assert CLIENT_ID is not None and CLIENT_SECRET is not None
 
     try: 
         async with httpx.AsyncClient(timeout=30) as client:
+            body = urllib.parse.urlencode(data)
             token_response = await client.post(
                 token_url,
-                data=data,
+                content=body,
                 auth=(CLIENT_ID, CLIENT_SECRET),
-                headers = {
-                    "Accept": "application/json",
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "User-Agent": "XeroIntegration/1.0"
-                }
-            )
+                headers = headers 
+                )
 
         if token_response.status_code != 200:
             error_body = token_response.text
