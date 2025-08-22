@@ -101,11 +101,11 @@ export default function Journals() {
     </div>
      {modalOpen && 
     <CreateItemModel
-      title = "Create New Contact"
+      title = "Create New Journal"
       fields = {journalsField}
-      apiEndpoint = "http://localhost:8000/xero/payments"
+      apiEndpoint = {`${String(API_URL)}/xero/journals`}
       onSubmit={(formData)=> {
-        console.log("Contact Created: ", formData)}
+        console.log("Journal Created: ", formData)}
       }
       onClose={()=> setModalOpen(false)}
       dataProcessor={processJournalData}

@@ -5,9 +5,10 @@ import {processInvoiceData} from '../utils';
 import {formatXeroDate} from '../utils';
 import CreateItemModel from './CreateItemModel';
 import {useAPIData} from '../utils';
+import {API_URL} from '../utils';
 
 export default function Invoices() {
-    const {data: invoices, loading, error} = useAPIData('http://localhost:8000/xero/invoices', 'Invoices');
+    const {data: invoices, loading, error} = useAPIData(`${API_URL}/xero/invoices`, 'Invoices');
     const [modalOpen, setModalOpen] = useState(false);
 
     return (
@@ -64,7 +65,7 @@ export default function Invoices() {
             <CreateItemModel 
                 title="Create New Invoice" 
                 fields={invoicesField} 
-                apiEndpoint="http://localhost:8000/xero/invoices" 
+                apiEndpoint={`${String(API_URL)}/xero/invoices`} 
                 onSubmit={(formData) => {
                     console.log("Creating invoice: ", formData);}}
 

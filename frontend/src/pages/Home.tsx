@@ -1,9 +1,9 @@
-import React from 'react';
 import Header from '../components/Header'
 import ConnectButton from '../components/ConnectButton'
 import InfoBox from '../components/InfoBox';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
+import {API_URL} from '../utils';
 
 export default function Home() {
 
@@ -11,7 +11,7 @@ export default function Home() {
         console.log("Connecting to Xero")
 
         try {
-            window.location.href = "https://7ad79eaf5978.ngrok-free.app/login"
+            window.location.href = `${API_URL}/login`
         } catch (error) {
             console.log("Failed to connect to Xero: ", error);
         }

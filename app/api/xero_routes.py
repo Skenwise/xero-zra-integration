@@ -35,7 +35,7 @@ from app.utils.utility_function import api_endpoint_call
 
 router = APIRouter()
 settings = get_settings()
-REDIRECT_URI="https://7ad79eaf5978.ngrok-free.app/callback"
+REDIRECT_URI="https://kabert-zra-integration.serveo.net/callback"
 print(REDIRECT_URI)
 
 # Login endpoint
