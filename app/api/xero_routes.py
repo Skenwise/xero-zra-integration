@@ -5,6 +5,8 @@ from typing import List, Dict, Any, Optional
 import traceback
 import urllib.parse
 import httpx
+from starlette.requests import Request
+
 
 # core fastAPI import
 from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request, Header
@@ -139,7 +141,7 @@ async def oauth_callback(
 
         redirect_response = RedirectResponse(url="/dashboard", status_code=307)
         redirect_response.set_cookie("session_id", value=session.session_id, httponly=True,
-                                    secure=True, samesite="lax", max_age=3600
+                                    secure=True, samesite="none", max_age=3600
                                      )
         return redirect_response
     
@@ -181,8 +183,9 @@ async def fetch_connections(session: SessionContext = Depends(get_session)):
 
 #Xero Invoices API endpoints
 @router.get("/xero/invoices")
-async def fetch_xero_invoices(session: SessionContext = Depends(get_session), status: Optional[str]=None):
+async def fetch_xero_invoices(request: Request, session: SessionContext = Depends(get_session), status: Optional[str]=None):
     try:
+        print("Incoming session_id: ", request.cookies.get("session_id"))
         return await get_invoices(session, status=status)
     except Exception as e:
         traceback.print_exc()
