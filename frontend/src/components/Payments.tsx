@@ -5,10 +5,11 @@ import CreateItemModel from './CreateItemModel';
 import {formatXeroDate} from '../utils';
 import {paymentsField} from '../utils';
 import {processPaymentData} from '../utils';
+import {API_URL} from '../utils';
 
 export default function Payments() {
 
-    const {data: payments, loading, error} = useAPIData('http://localhost:8000/xero/payments', 'Payments');
+    const {data: payments, loading, error} = useAPIData(`${API_URL}/xero/payments`, 'Payments');
     const [modalOpen, setModalOpen] = useState(false);
 
     return (
@@ -60,11 +61,11 @@ export default function Payments() {
         </div>
      {modalOpen && 
     <CreateItemModel
-      title = "Create New Contact"
+      title = "Create New Payment"
       fields = {paymentsField}
-      apiEndpoint = "http://localhost:8000/xero/payments"
+      apiEndpoint = {`${String(API_URL)}/xero/payments`}
       onSubmit={(formData)=> {
-        console.log("Contact Created: ", formData)}
+        console.log("Payment Created: ", formData)}
       }
       onClose={()=> setModalOpen(false)}
       dataProcessor={processPaymentData}

@@ -5,10 +5,11 @@ import CreateItemModel from './CreateItemModel';
 import {formatXeroDate} from '../utils';
 import {transactionsField} from '../utils';
 import {processTransactionsData} from '../utils';
+import {API_URL} from '../utils';
 
 export default function BankTransactions() {
 
-  const {data: transactions, loading, error} = useAPIData('http://localhost:8000/xero/banktransactions', 'BankTransactions')  
+  const {data: transactions, loading, error} = useAPIData(`${API_URL}/xero/banktransactions`, 'BankTransactions')  
   const [modalOpen, setModalOpen] = useState(false);  
 
   return (
@@ -66,7 +67,7 @@ export default function BankTransactions() {
     <CreateItemModel
       title = "Create New Contact"
       fields = {transactionsField}
-      apiEndpoint = "http://localhost:8000/xero/banktransactions"
+      apiEndpoint = {`${String(API_URL)}/xero/banktransactions`}
       onSubmit={(formData)=> {
         console.log("Contact Created: ", formData)}
       }

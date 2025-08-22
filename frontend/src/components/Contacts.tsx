@@ -4,10 +4,11 @@ import {useAPIData} from '../utils';
 import CreateItemModel from './CreateItemModel';
 import {contactsField} from '../utils';
 import {processContactData} from '../utils';
+import {API_URL} from '../utils';
 
 export default function Contacts() {
 
-  const {data: contacts, loading, error} = useAPIData('http://localhost:8000/xero/contacts', 'Contacts')
+  const {data: contacts, loading, error} = useAPIData(`${API_URL}/xero/contacts`, 'Contacts')
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -57,7 +58,7 @@ export default function Contacts() {
     <CreateItemModel
       title = "Create New Contact"
       fields = {contactsField}
-      apiEndpoint = "http://localhost:8000/xero/contacts"
+      apiEndpoint = {`${String(API_URL)}/xero/contacts`}
       onSubmit={(formData)=> {
         console.log("Contact Created: ", formData)}
       }

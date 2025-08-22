@@ -5,10 +5,10 @@ import CreateItemModel from './CreateItemModel';
 import {formatXeroDate} from '../utils';
 import {notesField} from '../utils';
 import {processNotesData} from '../utils';
-
+import {API_URL} from '../utils';
 
 export default function CreditNotes() {
-  const {data: notes, loading, error} = useAPIData('http://localhost:8000/xero/creditnotes', 'CreditNotes')  
+  const {data: notes, loading, error} = useAPIData(`${API_URL}/xero/creditnotes`, 'CreditNotes')  
   const [modalOpen, setModalOpen] = useState(false);  
 
   return (
@@ -66,9 +66,9 @@ export default function CreditNotes() {
     </div>
      {modalOpen && 
     <CreateItemModel
-      title = "Create New Contact"
+      title = "Create New Credit Notes"
       fields = {notesField}
-      apiEndpoint = "http://localhost:8000/xero/creditnotes"
+      apiEndpoint = {`${String(API_URL)}/xero/creditnotes`}
       onSubmit={(formData)=> {
         console.log("Credit Notes Created: ", formData)}
       }
