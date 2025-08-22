@@ -128,7 +128,8 @@ async def oauth_callback(
         
         token_data = token_response.json()
 
-        await session.manager.update_session(session.session_id, "token_set", token_data)
+        await session.manager.update_session(session.session_id, "access_token", token_data["access_token"])
+        await session.manager.update_session(session.session_id, "refresh_token", token_data["refresh_token"])
 
         xero_api_client = get_xero_api_client()
         if xero_api_client.configuration.oauth2_token is None:
@@ -137,7 +138,9 @@ async def oauth_callback(
             xero_api_client.configuration.oauth2_token.update_token(**token_data)
 
         redirect_response = RedirectResponse(url="/dashboard", status_code=307)
-        redirect_response.set_cookie("session_id", value=session.session_id, httponly=True)
+        redirect_response.set_cookie("session_id", value=session.session_id, httponly=True,
+                                    secure=True, samesite="lax", max_age=3600
+                                     )
         return redirect_response
     
     except httpx.RequestError as e:

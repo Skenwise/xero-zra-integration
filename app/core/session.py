@@ -1,4 +1,4 @@
-import uuid
+from fastapi import HTTPException
 import os
 from redis.asyncio import Redis
 from starlette.requests import Request
@@ -27,9 +27,5 @@ class SessionContext:
 async def get_session(request: Request) -> SessionContext:
     session_id = request.cookies.get("session_id")
     if not session_id:
-        session_id = str(uuid.uuid4())
-        await session_manager.set_session(session_id, {})
-        request.state.new_session_id = session_id
-    
-    request.state.session_id = session_id
+        raise HTTPException(status_code=401, detail="No active session")   
     return SessionContext(session_id, session_manager)
