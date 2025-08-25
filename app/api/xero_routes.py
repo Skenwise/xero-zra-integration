@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Optional
 import traceback
 import urllib.parse
 import httpx
+from app.core.setting import REDIS_URL, CLIENT_ID,  CLIENT_SECRET, FRONTEND_URL, REDIRECT_URI 
 
 # core fastAPI import
 from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request, Header
@@ -22,8 +23,7 @@ from xero_python.exceptions import OAuth2InvalidGrantError
 
 # import session
 from app.core.session import get_session, SessionContext
-from app.core.config import get_settings
-from app.utils.xero_auth import CLIENT_ID, CLIENT_SECRET, SCOPES
+from app.utils.xero_auth import SCOPES
 from app.utils.xero_auth import get_xero_api_client, get_connections, get_access_token, fetch_tenant_id_data   
 from app.services.xero_service import get_invoices, create_invoice, get_invoice_by_id, update_invoice, delete_invoice
 from app.services.xero_service import create_contact, get_all_contacts, get_contact_by_id, update_contact, delete_contact
@@ -34,9 +34,8 @@ from app.services.xero_service import get_accounts, get_journal, get_report, get
 from app.utils.utility_function import api_endpoint_call
 
 router = APIRouter()
-settings = get_settings()
-REDIRECT_URI="https://kabert-zra-integration.serveo.net/callback"
-print(REDIRECT_URI)
+print(f"this is the f url {REDIRECT_URI}" )
+
 
 # Login endpoint
 @router.get("/login")
@@ -158,11 +157,11 @@ async def dashboard(session: SessionContext = Depends(get_session)):
         token_set = session_data.get("token_set")
     else:
         token_set = None
-    if token_set:
+    if token_set and FRONTEND_URL:
         print("TOken set found in session")
-        return RedirectResponse(url="https://xero-zra-integration.vercel.app/dashboard")
+        return RedirectResponse(url=FRONTEND_URL)
     else:
-        print("TOken set not found in session")
+        print("TOken set not found in session or frontend url not found")
         return {"message": "Not connected to Xero. Please visit/login."}    
 
 #Xero API connection
