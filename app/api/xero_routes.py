@@ -39,8 +39,6 @@ from app.services.xero_service import get_accounts, get_journal, get_report, get
 from app.utils.utility_function import api_endpoint_call
 
 router = APIRouter()
-print(f"this is the f url {REDIRECT_URI}" )
-
 
 # Login endpoint
 @router.get("/login")
@@ -166,12 +164,9 @@ async def dashboard(session: SessionContext = Depends(get_session)):
     else:
         token_set = None
     if token_set and FRONTEND_URL:
-    if token_set and FRONTEND_URL:
         print("TOken set found in session")
         return RedirectResponse(url=FRONTEND_URL)
-        return RedirectResponse(url=FRONTEND_URL)
     else:
-        print("TOken set not found in session or frontend url not found")
         print("TOken set not found in session or frontend url problem")
         return {"message": "Not connected to Xero. Please visit/login."}    
 
