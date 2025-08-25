@@ -208,3 +208,4 @@ __marimo__/
 
 # environment variable
 .env
+.env.local

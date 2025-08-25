@@ -23,7 +23,7 @@ from xero_python.identity import IdentityApi
 from xero_python.exceptions import OAuth2InvalidGrantError
 
 # import session
-from app.core.session import get_session, SessionContext
+from app.core.session import get_session, SessionContext, create_session
 from app.core.config import get_settings
 from app.utils.xero_auth import CLIENT_ID, CLIENT_SECRET, SCOPES
 from app.utils.xero_auth import get_xero_api_client, get_connections, get_access_token, fetch_tenant_id_data   
@@ -42,7 +42,7 @@ print(REDIRECT_URI)
 
 # Login endpoint
 @router.get("/login")
-async def login(request: Request, session: SessionContext = Depends(get_session)):
+async def login(request: Request, session: SessionContext = Depends(create_session)):
     state = str(uuid.uuid4()) # generate unique ID for the login attempt
 
     await session.manager.set(session.session_id, "oauth_state", state)
@@ -130,7 +130,7 @@ async def oauth_callback(
         
         token_data = token_response.json()
 
-        await session.manager.update_session(session.session_id, "access_token", token_data["access_token"])
+        await session.manager.update_session(session.session_id, "token_set", token_data)
         await session.manager.update_session(session.session_id, "refresh_token", token_data["refresh_token"])
 
         xero_api_client = get_xero_api_client()
