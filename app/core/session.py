@@ -1,18 +1,9 @@
+from fastapi import HTTPException
 import uuid
-import os
+from typing import Optional 
 from redis.asyncio import Redis
 from starlette.requests import Request
-
-from app.core.redis_client import RedisSessionManager
-
-redis_url= os.getenv("REDIS_URL")
-
-if not redis_url:
-    print("redis URL is not set")
-    raise RuntimeError("REDIS_URL environment is not set")
-
- 
-redis_client = Redis.from_url(redis_url, decode_responses=True)
+from app.core.redis_client import RedisSessionManager, redis_client
 
 # setting up redis 
 session_manager = RedisSessionManager(redis_client)
@@ -24,12 +15,18 @@ class SessionContext:
         self.manager = manager
     
 # get_session dependency
-async def get_session(request: Request) -> SessionContext:
+async def get_session(request: Request, login: bool = False) -> SessionContext:
     session_id = request.cookies.get("session_id")
     if not session_id:
-        session_id = str(uuid.uuid4())
-        await session_manager.set_session(session_id, {})
-        request.state.new_session_id = session_id
-    
-    request.state.session_id = session_id
+
+        if login:
+            session_id = str(uuid.uuid4())
+        else:
+            raise HTTPException(status_code=401, detail="No active session")
+       
     return SessionContext(session_id, session_manager)
+
+# create session for login
+async def create_session (request: Request) -> SessionContext:
+    
+    return await get_session(request, login=True)

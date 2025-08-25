@@ -2,7 +2,7 @@ import json
 import httpx
 
 from app.core.session import get_session, SessionContext
-from app.core.setting import REDIS_URL, CLIENT_ID,  CLIENT_SECRET, FRONTEND_URL, REDIRECT_URI 
+from app.core.setting import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, FRONTEND_URL, REDIS_URL
 # core fastAPI import
 from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request, Header
 from fastapi.responses import RedirectResponse
@@ -14,8 +14,6 @@ from xero_python.api_client.configuration import Configuration
 
 from typing import Optional, List, Dict, Any
 
-
-# declaring our environment variable
 XERO_CONNECTIONS_URL = "https://api.xero.com/connections"
 
 # xero Oauth scope to define what is allowed

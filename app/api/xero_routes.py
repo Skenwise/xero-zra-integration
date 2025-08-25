@@ -6,6 +6,8 @@ import traceback
 import urllib.parse
 import httpx
 from app.core.setting import REDIS_URL, CLIENT_ID,  CLIENT_SECRET, FRONTEND_URL, REDIRECT_URI 
+from starlette.requests import Request
+
 
 # core fastAPI import
 from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request, Header
@@ -24,6 +26,9 @@ from xero_python.exceptions import OAuth2InvalidGrantError
 # import session
 from app.core.session import get_session, SessionContext
 from app.utils.xero_auth import SCOPES
+from app.core.session import get_session, SessionContext, create_session
+from app.core.setting import CLIENT_ID, CLIENT_SECRET, REDIS_URL, REDIRECT_URI, FRONTEND_URL
+from app.utils.xero_auth import CLIENT_ID, CLIENT_SECRET, SCOPES
 from app.utils.xero_auth import get_xero_api_client, get_connections, get_access_token, fetch_tenant_id_data   
 from app.services.xero_service import get_invoices, create_invoice, get_invoice_by_id, update_invoice, delete_invoice
 from app.services.xero_service import create_contact, get_all_contacts, get_contact_by_id, update_contact, delete_contact
@@ -39,7 +44,7 @@ print(f"this is the f url {REDIRECT_URI}" )
 
 # Login endpoint
 @router.get("/login")
-async def login(request: Request, session: SessionContext = Depends(get_session)):
+async def login(request: Request, session: SessionContext = Depends(create_session)):
     state = str(uuid.uuid4()) # generate unique ID for the login attempt
 
     await session.manager.set(session.session_id, "oauth_state", state)
@@ -128,6 +133,7 @@ async def oauth_callback(
         token_data = token_response.json()
 
         await session.manager.update_session(session.session_id, "token_set", token_data)
+        await session.manager.update_session(session.session_id, "refresh_token", token_data["refresh_token"])
 
         xero_api_client = get_xero_api_client()
         if xero_api_client.configuration.oauth2_token is None:
@@ -136,7 +142,9 @@ async def oauth_callback(
             xero_api_client.configuration.oauth2_token.update_token(**token_data)
 
         redirect_response = RedirectResponse(url="/dashboard", status_code=307)
-        redirect_response.set_cookie("session_id", value=session.session_id, httponly=True)
+        redirect_response.set_cookie("session_id", value=session.session_id, httponly=True,
+                                    secure=True, samesite="none", max_age=3600
+                                     )
         return redirect_response
     
     except httpx.RequestError as e:
@@ -158,10 +166,13 @@ async def dashboard(session: SessionContext = Depends(get_session)):
     else:
         token_set = None
     if token_set and FRONTEND_URL:
+    if token_set and FRONTEND_URL:
         print("TOken set found in session")
+        return RedirectResponse(url=FRONTEND_URL)
         return RedirectResponse(url=FRONTEND_URL)
     else:
         print("TOken set not found in session or frontend url not found")
+        print("TOken set not found in session or frontend url problem")
         return {"message": "Not connected to Xero. Please visit/login."}    
 
 #Xero API connection
@@ -177,8 +188,9 @@ async def fetch_connections(session: SessionContext = Depends(get_session)):
 
 #Xero Invoices API endpoints
 @router.get("/xero/invoices")
-async def fetch_xero_invoices(session: SessionContext = Depends(get_session), status: Optional[str]=None):
+async def fetch_xero_invoices(request: Request, session: SessionContext = Depends(get_session), status: Optional[str]=None):
     try:
+        print("Incoming session_id: ", request.cookies.get("session_id"))
         return await get_invoices(session, status=status)
     except Exception as e:
         traceback.print_exc()

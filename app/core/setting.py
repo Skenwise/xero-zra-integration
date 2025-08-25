@@ -1,12 +1,16 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
+import subprocess
 
-branch = os.popen("git rev-parse --abbrev-ref HEAD").read().strip()
+project_root = Path(__file__).parent.parent.parent
+
+branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode().strip()
 
 if branch == 'main':
-    load_dotenv('../../.env')
+    load_dotenv(project_root / '.env')
 else:
-    load_dotenv('../../.env.local')
+    load_dotenv(project_root / '.env.local')
 
 print(branch)
 
