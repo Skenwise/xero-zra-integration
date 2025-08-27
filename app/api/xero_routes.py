@@ -182,7 +182,6 @@ async def fetch_connections(session: SessionContext = Depends(get_session)):
 @router.get("/xero/invoices")
 async def fetch_xero_invoices(request: Request, session: SessionContext = Depends(get_session), status: Optional[str]=None):
     try:
-        print("Incoming session_id: ", request.cookies.get("session_id"))
         return await get_invoices(session, status=status)
     except Exception as e:
         traceback.print_exc()
