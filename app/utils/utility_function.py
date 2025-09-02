@@ -13,7 +13,6 @@ class Header_data():
     @staticmethod
     async def retrieve_access_token(session):
         access_token = await get_access_token(session)
-        print(access_token)
         return access_token
     
     @staticmethod
@@ -24,7 +23,6 @@ class Header_data():
 
 async def api_request(session: SessionContext, endpoint: str, http_action: str, filter: Optional[str]=None, data: Optional[dict]=None, params: Optional[dict[str, Any]]=None, base_url: Optional[str]=XERO_BASE_URL) -> Dict[str, Any]:
     access_token = await Header_data.retrieve_access_token(session)
-    print(access_token)
     tenant_id = await Header_data.retrieve_tenant_id(session)
 
     url = f"{base_url}/{endpoint}"
@@ -46,7 +44,7 @@ async def api_request(session: SessionContext, endpoint: str, http_action: str, 
             "Content-type": "application/json"
         }
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30) as client:
         response = await client.request(method=http_action.upper(), url=url, headers=headers, json=data, params=params)
 
     if response.status_code != 200 and response.status_code != 201:

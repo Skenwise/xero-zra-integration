@@ -17,6 +17,7 @@ class SessionContext:
 # get_session dependency
 async def get_session(request: Request, login: bool = False) -> SessionContext:
     session_id = request.cookies.get("session_id")
+    print(f"the session id is: {session_id}")
     if not session_id:
 
         if login:

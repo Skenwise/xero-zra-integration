@@ -1,7 +1,7 @@
 import {Home, FileText, Settings} from 'lucide-react';
 import {useState, useEffect} from 'react';
 
-export const API_URL = "https://kabert-zra-integration.serveo.net";
+export const API_URL = "http://localhost:10000";
 
 export const SidebarItems = [
     {label: "Home",
@@ -38,6 +38,11 @@ export const journalsField = [
   { label: "Tax Type", name: "TaxType", type: "text" },
   { label: "Tax Name", name: "TaxName", type: "text" },
   { label: "Description", name: "Description", type: "text" },
+];
+export const REPORT_TYPES = [
+  { label: 'Balance Sheet', value: 'BalanceSheet' },
+  { label: 'Profit & Loss', value: 'ProfitAndLoss' },
+  { label: 'Trial Balance', value: 'trialBalance' },
 ];
 
 export const incomeStatement = [
@@ -242,4 +247,10 @@ export function useAPIDataJournal(JournalID: string) {
   }
 
   return {journal: journalsArray[0], loading: false, error: null}
+}
+
+export function handleDisconnect () {
+  if (window.confirm("Are you sure you wanna disconnect from Xero?")) {
+    window.location.href = "/";
+  }
 }

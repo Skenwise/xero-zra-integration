@@ -140,7 +140,7 @@ async def oauth_callback(
             xero_api_client.configuration.oauth2_token.update_token(**token_data)
 
         redirect_response = RedirectResponse(url="/dashboard", status_code=307)
-        redirect_response.set_cookie("session_id", value=session.session_id, httponly=True,
+        redirect_response.set_cookie("session_id", value=session.session_id,
                                     secure=True, samesite="none", max_age=3600
                                      )
         return redirect_response
@@ -321,7 +321,10 @@ async def delete_bank_transaction_endpoint(bank_transaction_id: str, session: Se
 # Xero Account API Endpoint
 @router.get("/xero/accounts")
 async def get_account_endpoint(session: SessionContext=Depends(get_session), status: Optional[str]=None):
-    return await get_accounts(session, status) 
+    try:
+        return await get_accounts(session, status)
+    except httpx.ReadTimeout:
+        return JSONResponse(status_code=504, content={"Error": "Xero API request time out. Try again later"}) 
 
 # Xero journal API Endpoint
 @router.get("/xero/journals")
@@ -350,4 +353,3 @@ async def identity_info(session: SessionContext=Depends(get_session)):
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
     
-Authorization = "Basic <base64(870744B2D93E44E7AD93466EED2AF06C:TGdO5Ums6JVURWXyGL9cOjWilu7gHEe36HUxCBZ7hI0RfYdB)"

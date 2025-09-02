@@ -2,6 +2,7 @@ import React from 'react';
 import '../App.css';
 import {LogOut} from "lucide-react";
 import {Link, useLocation} from 'react-router-dom';
+import {handleDisconnect} from '../utils';
 
 interface sidebarItem {
     path: string;
@@ -36,7 +37,12 @@ export default function Sidebar({title, sidebarItems, exit}: SidebarProps) {
                     </Link>
                 ))}
             </div>
-            <div className="sidebar-bottom">
+            <div className="sidebar-bottom" onClick={() => {
+                handleDisconnect();
+                window.location.href = "/";
+            }}
+                style = {{cursor: "pointer"}}
+            >
                 <div className="Sidebar-items">
                     <LogOut size={20} />
                     <span>{exit}</span>

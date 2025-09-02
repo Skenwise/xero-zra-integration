@@ -4,7 +4,6 @@ import json
 from redis.asyncio import Redis
 
 redis_url= os.getenv("REDIS_URL", "redis://:8172CBnCNE9ttb11Z9OsO2Y9DGrg1qFP@redis-19904.c276.us-east-1-2.ec2.redns.redis-cloud.com:19904")
-print(redis_url)
 
 if redis_url is None:
     print("redis URL is not set")
