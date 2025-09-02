@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Accounting from './pages/Accounting';
 import AccountingReport from './pages/AccountingReport';
 import JournalDetailPages from './pages/JournalDetailPages';
+import Setting from './pages/setting';
 import './App.css'
 import './styles/index.css'
 
@@ -17,6 +18,7 @@ function App() {
         <Route path="/accounting/operations" element={<Accounting />} />
         <Route path="/accounting/records" element={<AccountingReport />} />
         <Route path="/accounting/records/journal/:JournalID" element={<JournalDetailPages />} />
+        <Route path="/settings" element={<Setting />} />
       </Routes>
     </Router>
   );

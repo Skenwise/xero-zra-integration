@@ -1,31 +1,26 @@
 import '../App.css';
+import BalanceSheetReport from './reportComponents/BalanceSheetReport';
+import ProfitLossReport from './reportComponents/ProfitLossReport';
+import TrialBalanceReport from './reportComponents/TrialBalanceReport';
 
-interface ReportItem {
-    label: string;
-    value: string;
+interface RenderReportProps {
+    reportType: "BalanceSheet" | "ProfitAndLoss" | "trialBalance";
+    reportData: any;
 }
 
-interface ReportItemProps {
-    title: string;
-    items: ReportItem[];
-    highlightLabel?: string;
-}
 
-export default function Report ({title, items, highlightLabel}: ReportItemProps) {
-    return (
-        <div className="report-card">
-            <h3 className="report-card-title">{title}</h3>
-            <div className="report-card-body">
-                {items.map((item, idx) =>(
-                <div 
-                    key={idx}
-                    className ={`report-row ${item.label === highlightLabel ? 'highlight': ''}`} 
-                >
-                    <span>{item.label}</span>
-                    <span>{item.value}</span>
-                </div>
-                ))}
-            </div>
-        </div>
-    );
+export default function Report ({reportType, reportData}: RenderReportProps) {
+        switch (reportType) {
+            case "BalanceSheet":
+                return <BalanceSheetReport data={reportData} />;
+
+            case "ProfitAndLoss":
+                return <ProfitLossReport data={reportData} />
+
+            case "trialBalance":
+                return <TrialBalanceReport data={reportData} />
+            
+            default:
+                return <div>No report Selected</div>;
+        }
 }
