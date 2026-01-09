@@ -1,0 +1,18 @@
+app:
+  name: VSDC Module
+  version: 1.0
+  base_url: http://localhost:8080/zraVsdc_v1TestLatest/
+
+logging:
+  level: info
+  file: "logs/vsdc.log"
+
+api:
+  headers:
+    content-type: "application/json"
+  timeout: 30
+
+defaults:
+  retry_attemps: 3
+  use_https: true
+

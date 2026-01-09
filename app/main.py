@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from app.api import xero_routes
 from fastapi.middleware.cors import CORSMiddleware
+from app.vsdc_module import api
 
 app = FastAPI()
 app.include_router(xero_routes.router)
+app.include_router(api.router)
 
 # Enable CORS in fastapi
 
