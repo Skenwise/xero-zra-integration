@@ -1,13 +1,12 @@
 # core fastAPI import
 from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request, Header
 from fastapi.responses import RedirectResponse, JSONResponse
-from vsdc_client import VSDCClient
+from .client import client
+from .utils import init_device
 import httpx
-from utils import init_device
 from typing import Optional, List, Any, Dict
 
 router = APIRouter()
-client = VSDCClient()
 
 @router.post("/initializer/selectInitInfo")
 async def deviceInitialization(tpin: str, bhfId: str, DvcSrlNo):

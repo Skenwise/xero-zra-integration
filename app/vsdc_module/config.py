@@ -14,7 +14,7 @@ class configuration:
     def __init__(self, yaml_file: str = "default.yaml", env_file: str = ".env"):
         self.config: Dict[Any, str] = {}
         self.yaml_file = yaml_file
-        self.env_file = yaml_file
+        self.env_file = env_file
 
     def load_config(self) -> Dict[Any, str]:
         # load configuration from yaml file and .env file.

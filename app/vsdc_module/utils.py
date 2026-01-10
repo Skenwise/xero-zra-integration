@@ -1,10 +1,8 @@
 from decimal import Decimal
 from typing import Any, Dict, Optional
-from vsdc_client import VSDCClient
 from datetime import datetime
 import hashlib, json, uuid, logging, asyncio
-
-client = VSDCClient()
+from .client import client
 
 async def init_device(tpin: str, bhfId: str, DvcSrlNo: str) -> dict:
     # wrapper for /initializer/selectInfo
@@ -13,10 +11,9 @@ async def init_device(tpin: str, bhfId: str, DvcSrlNo: str) -> dict:
         "bhfId": bhfId,
         "DvcSrlNo": DvcSrlNo
     }
-
     return await client._post("/initializer/selectInfo", payload)
 
-#Convert a VSDC date string to a datetime object
+# Convert a VSDC date string to a datetime object
 def parse_vsdc_date(date_str: Optional[str]) -> Optional[datetime]:
     if not date_str:
         return None
@@ -94,32 +91,4 @@ async def retry_async(func, attempts=3, delay=1, * args, **kwargs):
             if attempt ==  attempts - 1:
                 raise 
             await asyncio.sleep(delay)
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
