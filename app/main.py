@@ -1,23 +1,45 @@
+"""
+Xero-ZRA Integration - Main Application
+FastAPI backend with Xero and ZRA VSDC integration
+"""
+
 from fastapi import FastAPI
-from app.api import xero_routes
 from fastapi.middleware.cors import CORSMiddleware
-from app.vsdc_module import api
 
-app = FastAPI()
-app.include_router(xero_routes.router)
-app.include_router(api.router)
+from app.integrations.xero import router as xero_router
+from app.integrations.zra import router as zra_router
 
-# Enable CORS in fastapi
-
-origins = [
-    "https://xero-zra-integration.vercel.app",
-    "http://localhost:3000"
-]
+app = FastAPI(
+    title="Xero-ZRA Integration",
+    description="Bridge between Xero accounting and ZRA Smart Invoice VSDC",
+    version="2.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = origins,  # frontend origin
-    allow_credentials = True,
-    allow_methods = ["*"],
-    allow_headers = ["*"]
+    allow_origins=[
+        "http://localhost:3000",
+        "https://xero-zra-integration.vercel.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+app.include_router(xero_router)
+app.include_router(zra_router)
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Xero-ZRA Integration API",
+        "version": "2.0.0",
+        "endpoints": {
+            "xero": "/xero/*",
+            "zra": "/zra/*"
+        }
+    }
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}

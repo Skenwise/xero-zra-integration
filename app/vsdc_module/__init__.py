@@ -1,2 +1,0 @@
-# VSDC Module - ZRA Integration
-

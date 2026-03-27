@@ -1,6 +1,6 @@
 from typing import Optional, List
 from datetime import datetime
-from schema import FoundationBase, InformationBase, TransactionDetailsBase
+from request import FoundationBase, InformationBase, TransactionDetailsBase
 
 # =============================
 # Device Create Schema

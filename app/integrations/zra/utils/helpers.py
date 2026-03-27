@@ -2,7 +2,9 @@ from decimal import Decimal
 from typing import Any, Dict, Optional
 from datetime import datetime
 import hashlib, json, uuid, logging, asyncio
-from .client import client
+from app.clients.zra_client import VSDCClient
+
+client = VSDCClient()
 
 async def init_device(tpin: str, bhfId: str, DvcSrlNo: str) -> dict:
     # wrapper for /initializer/selectInfo

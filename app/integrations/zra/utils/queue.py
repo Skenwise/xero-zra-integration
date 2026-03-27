@@ -4,9 +4,9 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from datetime import datetime, timezone
-from database import get_session
-from utils import log_message, generate_idempotency_key, normalize_amount
-from model import QueueSale 
+from ..db.database import get_session
+from helpers import log_message, generate_idempotency_key, normalize_amount
+from ..db.models import QueueSale 
 import json
 
 class queueManager:

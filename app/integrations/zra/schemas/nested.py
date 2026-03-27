@@ -1,12 +1,12 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from schema import (
+from request import (
     CustomerSchema, BranchSchema, BranchCustomerSchema,
     UserAccountSchema, ItemSchema, ImportItemSchema,
     SalesTransactionSchema, PurchaseTransactionSchema,
     StockSchema, StockMasterSchema
 )
-from response_schema import ResponseBase
+from response import ResponseBase
 
 # =============================
 # Nested Customer with Branches

@@ -9,17 +9,17 @@ alias deactivate 'test $?_OLD_VIRTUAL_PATH != 0 && setenv PATH "$_OLD_VIRTUAL_PA
 # Unset irrelevant variables.
 deactivate nondestructive
 
-setenv VIRTUAL_ENV "/home/skenwise/Desktop/Project/xero-zra-integration/xero-zra-venv"
+setenv VIRTUAL_ENV /home/skenwise/dbs/Desktop/Project/xero-zra-integration/xero-zra-venv
 
 set _OLD_VIRTUAL_PATH="$PATH"
-setenv PATH "$VIRTUAL_ENV/bin:$PATH"
+setenv PATH "$VIRTUAL_ENV/"bin":$PATH"
 
 
 set _OLD_VIRTUAL_PROMPT="$prompt"
 
 if (! "$?VIRTUAL_ENV_DISABLE_PROMPT") then
-    set prompt = "(xero-zra-venv) $prompt"
-    setenv VIRTUAL_ENV_PROMPT "(xero-zra-venv) "
+    set prompt = '(xero-zra-venv) '"$prompt"
+    setenv VIRTUAL_ENV_PROMPT '(xero-zra-venv) '
 endif
 
 alias pydoc python -m pydoc

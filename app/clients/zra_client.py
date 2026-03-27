@@ -11,7 +11,7 @@ _logger = None
 def _get_config():
     global _config
     if _config is None:
-        from .config import configuration
+        from app.config.zra_config import configuration
         _config = configuration()
         _config.load_config()
     return _config
