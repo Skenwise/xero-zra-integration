@@ -155,3 +155,11 @@ async def get_report(session: SessionContext, report_type: str, from_date: Optio
 # identityAPI function
 async def get_identity(session: SessionContext) -> dict:
     return await api_request(session, "Connections", "get", base_url=XERO_IDENTITY_URL)
+
+# items helper function
+async def get_items(session: SessionContext) -> dict:
+    """
+    Fetch all items from Xero API
+    Returns cleaned items list with Code, Name, Description, TaxType
+    """
+    return await api_request(session, "items", "get")

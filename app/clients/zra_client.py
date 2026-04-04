@@ -3,6 +3,7 @@ import os
 from typing import Dict, Any
 import asyncio
 import logging
+from decimal import Decimal
 
 # Lazy configuration loading to avoid circular imports
 _config = None
@@ -29,10 +30,20 @@ def _get_logger():
         _logger = logging.getLogger("VSDCClient")
     return _logger
 
+def _convert_decimals(obj):
+    """Recursively convert Decimal objects to float for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {k: _convert_decimals(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_convert_decimals(item) for item in obj]
+    return obj
+
+
 class VSDCClient:
     # Async client to communicate with VSDC middleware
     def __init__(self, base_url: str | None = None, security_key: str | None = None):
-        # prefer explicit args, then YAML `app.base_url`, then env `VSDC_BASE_URL`
         config = _get_config()
         self.base_url = base_url or config.get("app.base_url") or config.get("VSDC_BASE_URL")
         self.security_key = security_key or config.get("VSDC_API_KEY")
@@ -52,12 +63,16 @@ class VSDCClient:
         url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
         config = _get_config()
         logger = _get_logger()
+        
+        # Convert Decimal objects to float for JSON serialization
+        clean_data = _convert_decimals(data)
+        
         attempt = 0
         while attempt < self.retry_attempts:
             try:
-                logger.info(f"POST {url} | Payload: {data}")
+                logger.info(f"POST {url} | Payload: {clean_data}")
                 async with httpx.AsyncClient(timeout=config.get("api.timeout", 30)) as http_client:
-                    response = await http_client.post(url, json=data, headers=self.headers)
+                    response = await http_client.post(url, json=clean_data, headers=self.headers)
                     response.raise_for_status()
                     logger.info(f"Response: {response.json()}")
                     return response.json()

@@ -1,4 +1,3 @@
-# app/schemas/zra_sales.py
 """
 ZRA VSDC Sales Transaction Schemas
 Based on ZRA API Documentation Section 3.6
@@ -55,7 +54,12 @@ class ZraSalesItemSchema(BaseModel):
 
 class ZraSalesRequestSchema(BaseModel):
     """Complete ZRA sales transaction request"""
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        json_encoders={
+            Decimal: lambda v: float(v)
+        }
+    )
     
     # Header information
     tpin: str = Field(..., max_length=10)
@@ -88,7 +92,7 @@ class ZraSalesRequestSchema(BaseModel):
     # Item counts
     totItemCnt: int = Field(...)
     
-    # Tax buckets - FIXED: Use Decimal('0') not 0
+    # Tax buckets
     taxblAmtA: Decimal = Field(Decimal('0'))
     taxblAmtB: Decimal = Field(Decimal('0'))
     taxblAmtC1: Decimal = Field(Decimal('0'))
@@ -168,8 +172,3 @@ class ZraSalesRequestSchema(BaseModel):
         if s.isdigit() and len(s) == 10:
             return s
         return None
-    
-    class Config:
-        json_encoders = {
-            Decimal: lambda v: float(v)
-        }

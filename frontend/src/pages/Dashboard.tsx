@@ -29,6 +29,7 @@ import {
   Toolbar,
   Menu,
   MenuItem,
+  Snackbar,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -97,6 +98,7 @@ interface ZRAStatus {
   status: 'not_submitted' | 'pending' | 'submitted' | 'failed';
   submittedAt?: string;
   errorMessage?: string;
+  receiptNo?: string;
 }
 
 // ============================================
@@ -316,9 +318,33 @@ export default function Dashboard() {
   const [zraStatuses, setZraStatuses] = useState<ZRAStatus[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   // Fetch real invoices from Xero
   const { data: invoices, loading, error } = useAPIData(`${API_URL}/xero/invoices`, 'Invoices');
+
+  // Load saved ZRA statuses from localStorage (persist between sessions)
+  useEffect(() => {
+    const saved = localStorage.getItem('zra_statuses');
+    if (saved) {
+      try {
+        setZraStatuses(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse saved ZRA statuses', e);
+      }
+    }
+  }, []);
+
+  // Save ZRA statuses to localStorage
+  useEffect(() => {
+    if (zraStatuses.length > 0) {
+      localStorage.setItem('zra_statuses', JSON.stringify(zraStatuses));
+    }
+  }, [zraStatuses]);
 
   // Initialize ZRA statuses when invoices load
   useEffect(() => {
@@ -424,12 +450,14 @@ export default function Dashboard() {
     }
   };
 
+  // REAL ZRA SUBMISSION - calls backend API with proper error handling
   const handleSubmitToZRA = async () => {
     if (selectedInvoices.length === 0) return;
 
     setSubmitting(true);
     setSubmitMessage(null);
 
+    // Mark selected as pending
     setZraStatuses(prev =>
       prev.map(status =>
         selectedInvoices.includes(status.invoiceId)
@@ -438,13 +466,59 @@ export default function Dashboard() {
       )
     );
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const results: { invoiceId: string; success: boolean; receiptNo?: string; error?: string }[] = [];
 
-    const results = selectedInvoices.map(invoiceId => ({
-      invoiceId,
-      success: Math.random() > 0.2,
-    }));
+    // Submit each invoice to the backend
+    for (const invoiceId of selectedInvoices) {
+      try {
+        const response = await fetch(`${API_URL}/submit/${invoiceId}`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
+        if (!response.ok) {
+          // Handle HTTP error responses (400, 500, etc.)
+          let errorMessage = `HTTP ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.detail || errorData.error || errorMessage;
+          } catch {
+            errorMessage = await response.text() || errorMessage;
+          }
+          results.push({
+            invoiceId,
+            success: false,
+            error: errorMessage,
+          });
+        } else {
+          const result = await response.json();
+          if (result.success) {
+            results.push({
+              invoiceId,
+              success: true,
+              receiptNo: result.zra_receipt_no,
+            });
+          } else {
+            results.push({
+              invoiceId,
+              success: false,
+              error: result.error || 'Submission failed',
+            });
+          }
+        }
+      } catch (error) {
+        results.push({
+          invoiceId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Network error',
+        });
+      }
+    }
+
+    // Update statuses based on results
     setZraStatuses(prev =>
       prev.map(status => {
         const result = results.find(r => r.invoiceId === status.invoiceId);
@@ -453,7 +527,8 @@ export default function Dashboard() {
             ...status,
             status: result.success ? 'submitted' as const : 'failed' as const,
             submittedAt: result.success ? new Date().toISOString() : undefined,
-            errorMessage: result.success ? undefined : 'ZRA validation failed',
+            errorMessage: result.success ? undefined : result.error,
+            receiptNo: result.receiptNo,
           };
         }
         return status;
@@ -464,14 +539,27 @@ export default function Dashboard() {
     const failCount = results.filter(r => !r.success).length;
 
     if (failCount === 0) {
-      setSubmitMessage({ type: 'success', text: `${successCount} invoices submitted to ZRA successfully!` });
+      setSnackbar({
+        open: true,
+        message: `${successCount} invoice${successCount !== 1 ? 's' : ''} submitted to ZRA successfully!`,
+        severity: 'success',
+      });
+    } else if (successCount === 0) {
+      setSnackbar({
+        open: true,
+        message: `Failed to submit ${failCount} invoice${failCount !== 1 ? 's' : ''}. ${results[0]?.error || 'Check item mappings.'}`,
+        severity: 'error',
+      });
     } else {
-      setSubmitMessage({ type: 'error', text: `${successCount} submitted, ${failCount} failed.` });
+      setSnackbar({
+        open: true,
+        message: `${successCount} submitted, ${failCount} failed.`,
+        severity: 'error',
+      });
     }
 
     setSelectedInvoices([]);
     setSubmitting(false);
-    setTimeout(() => setSubmitMessage(null), 5000);
   };
 
   const handleRefresh = () => {
@@ -621,7 +709,7 @@ export default function Dashboard() {
                           innerRadius={60}
                           outerRadius={90}
                           dataKey="value"
-                          label={({ name, percent }) => percent !== undefined ? `${name} ${(percent * 100).toFixed(0)}%`: name}
+                          label={({ name, percent }) => percent !== undefined ? `${name} ${(percent * 100).toFixed(0)}%` : name}
                           labelLine={false}
                         >
                           {statusDistribution.map((entry, index) => (
@@ -801,6 +889,17 @@ export default function Dashboard() {
           </Box>
         </Container>
       </Box>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

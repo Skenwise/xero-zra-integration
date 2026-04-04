@@ -3,6 +3,7 @@ from fastapi import HTTPException, Query, Response, Depends, APIRouter, Request,
 from fastapi.responses import RedirectResponse, JSONResponse
 from app.integrations.zra.utils.helpers import init_device
 from app.clients.zra_client import VSDCClient
+from app.core.session import get_session, SessionContext
 import httpx
 from typing import Optional, List, Any, Dict
 
@@ -24,7 +25,6 @@ async def getCodeData(tpin: str, bhfId: str, lastReqDt: str):
         "bhfId": bhfId,
         "lastReqDt": lastReqDt
     }
-
     return await client._post("/code/selectCodes", payload)
 
 router.post("/itemClass/selectItemClass")
@@ -34,7 +34,6 @@ async def getItemClassificationCode(tpin: str, bhfId: str, lastReqDt: str):
         "bhfID": bhfId,
         "lastReqDt": lastReqDt
     }
-
     return await client._post("/itemClass/selectItemClass", payload)
 
 router.post("/notices/selectNotices")
@@ -83,7 +82,6 @@ async def addCutomerToBranch(tpin: str, bhfId: str, custNo: str, custTpin: str, 
         "modrNm": modrNm,
         "modrId": modrId
     }
-
     return await client._post("/branches/selectBranhces", payload)
 
 router.post("/branches/saveBrancheUsers")
@@ -390,3 +388,131 @@ async def addMasterStockItem(tpin: str, bhfId: str, itemCd: str, rsdQty: float, 
     }
     return await client._post("/stockMaster/saveStockMaster", payload)
 
+@router.post("/submit/{invoice_id}")
+async def submit_invoice_to_zra(
+    invoice_id: str,
+    session: SessionContext = Depends(get_session)
+):
+    from app.services.zra_service import submit_xero_invoice_to_zra
+    result = await submit_xero_invoice_to_zra(invoice_id, session)
+    
+    # Log the result for debugging
+    print(f"\n📤 SUBMISSION RESULT for {invoice_id}:")
+    print(f"   Success: {result.get('success')}")
+    print(f"   Error: {result.get('error')}")
+    print(f"   Receipt: {result.get('zra_receipt_no')}\n")
+    
+    # Return proper HTTP status code based on result
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=400, 
+            detail=result.get("error", "Submission failed")
+        )
+    
+    return result
+
+@router.post("/save-config")
+async def save_zra_config(
+    config_data: dict,
+    session: SessionContext = Depends(get_session)
+):
+    from app.models.zra_models import ZraOrgConfig
+    from app.clients.zra_client import VSDCClient
+    
+    token_set = await session.manager.get(session.session_id, "token_set")
+    if not token_set:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    xero_tenant_id = await session.manager.get(session.session_id, "tenant_id")
+    if not xero_tenant_id:
+        xero_tenant_id = token_set.get("tenant_id")
+        if not xero_tenant_id:
+            raise HTTPException(status_code=400, detail="No Xero tenant found. Please reconnect Xero.")
+    
+    tpin = config_data.get("tpin", "")
+    bhf_id = config_data.get("bhfId") or config_data.get("bhf_id", "000")
+    dvc_srl_no = config_data.get("dvcSrlNo") or config_data.get("dvc_srl_no", "")
+    
+    if not tpin or len(tpin) != 10 or not tpin.isdigit():
+        raise HTTPException(status_code=400, detail=f"Invalid TPIN: must be 10 digits, got '{tpin}'")
+    
+    zra_config = ZraOrgConfig(
+        xero_tenant_id=xero_tenant_id,
+        zra_tpin=tpin,
+        zra_bhf_id=bhf_id,
+        zra_dvc_srl_no=dvc_srl_no,
+        environment="sandbox"
+    )
+    await zra_config.save()
+    
+    try:
+        zra_client = VSDCClient()
+        init_payload = {
+            "tpin": tpin,
+            "bhfId": bhf_id,
+            "dvcSrlNo": dvc_srl_no
+        }
+        await zra_client._post("/initializer/selectInitInfo", init_payload)
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to initialize device with ZRA mock server: {e}")
+    
+    return {"success": True, "message": "ZRA configuration saved"}
+
+@router.post("/save-item-mapping")
+async def save_item_mapping(
+    mapping_data: dict,
+    session: SessionContext = Depends(get_session)
+):
+    from app.models.zra_models import ItemMapping, get_zra_config
+    from app.clients.zra_client import VSDCClient
+    
+    token_set = await session.manager.get(session.session_id, "token_set")
+    if not token_set:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    xero_tenant_id = await session.manager.get(session.session_id, "tenant_id")
+    if not xero_tenant_id:
+        xero_tenant_id = token_set.get("tenant_id")
+        if not xero_tenant_id:
+            raise HTTPException(status_code=400, detail="No Xero tenant found. Please reconnect Xero.")
+    
+    item_mapping = ItemMapping(
+        xero_tenant_id=xero_tenant_id,
+        xero_item_code=mapping_data.get("xero_item_code", ""),
+        zra_item_cd=mapping_data.get("zra_item_cd", ""),
+        zra_item_cls_cd="",
+        zra_qty_unit_cd="U",
+        zra_pkg_unit_cd="NT",
+        zra_tax_ty_cd=mapping_data.get("zra_tax_ty_cd", "B")
+    )
+    await item_mapping.save()
+    
+    try:
+        zra_client = VSDCClient()
+        zra_config = await get_zra_config(xero_tenant_id)
+        tpin = zra_config.zra_tpin if zra_config else "9999999999"
+        bhf_id = zra_config.zra_bhf_id if zra_config else "000"
+        
+        register_payload = {
+            "tpin": tpin,
+            "bhfId": bhf_id,
+            "itemCd": mapping_data.get("zra_item_cd", ""),
+            "itemClsCd": "5059690800",
+            "itemTyCd": "2",
+            "itemNm": mapping_data.get("xero_item_code", ""),
+            "orgnNatCd": "ZM",
+            "pkgUnitCd": "NT",
+            "qtyUnitCd": "U",
+            "taxTyCd": mapping_data.get("zra_tax_ty_cd", "B"),
+            "dftPrc": 0,
+            "useYn": "Y",
+            "regrNm": "System",
+            "regrId": "SYSTEM",
+            "modrNm": "System",
+            "modrId": "SYSTEM"
+        }
+        await zra_client._post("/items/saveItems", register_payload)
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to register item with ZRA mock server: {e}")
+    
+    return {"success": True, "message": "Item mapping saved"}

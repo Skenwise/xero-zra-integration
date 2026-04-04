@@ -1,5 +1,5 @@
 // frontend/src/pages/setting.tsx
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -33,6 +33,13 @@ import {
   InputAdornment,
   Tab,
   Tabs,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
@@ -52,7 +59,7 @@ import {
   ChevronRight as ChevronRightIcon,
   Dashboard as DashboardIcon,
   ReceiptLong as InvoicesIcon,
-  Assessment as ReportIcon,
+  Assessment as AssessmentIcon,
   AccountCircle as AccountIcon,
   Menu as MenuIcon,
   Search as SearchIcon,
@@ -60,7 +67,6 @@ import {
   CloudUpload as CloudUploadIcon,
   Visibility as VisibilityIcon,
   Warning as WarningIcon,
-  Assessment as AssessmentIcon
 } from '@mui/icons-material';
 import { motion, useInView } from 'framer-motion';
 import { useAPIData, API_URL, handleDisconnect } from '../utils';
@@ -80,6 +86,20 @@ interface Tenant {
   updatedDateUtc: string;
 }
 
+interface XeroItem {
+  Code: string;
+  Name: string;
+  Description: string;
+  TaxType: string;
+}
+
+interface ItemMapping {
+  xero_item_code: string;
+  zra_item_cd: string;
+  zra_tax_ty_cd: string;
+  saved?: boolean;
+}
+
 // ============================================
 // SIDEBAR COMPONENT
 // ============================================
@@ -94,7 +114,7 @@ const Sidebar = () => {
   const menuItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { path: '/accounting/operations', label: 'Accounting', icon: <InvoicesIcon /> },
-    { path: '/accounting/records', label: 'Reports', icon: <ReportIcon /> },
+    { path: '/accounting/records', label: 'Reports', icon: <AssessmentIcon /> },
     { path: '/settings', label: 'Settings', icon: <SettingsIcon /> },
   ];
 
@@ -274,12 +294,18 @@ export default function Settings() {
   });
 
   // ZRA Settings State
-  const [zraSettings, setZraSettings] = useState({
+  const [zraConfig, setZraConfig] = useState({
     tpin: '',
-    branchId: '000',
-    deviceSerial: '',
-    environment: 'sandbox' as 'sandbox' | 'production',
+    bhfId: '',
+    dvcSrlNo: '',
   });
+  const [configSaving, setConfigSaving] = useState(false);
+
+  // Item Mapping State
+  const [xeroItems, setXeroItems] = useState<XeroItem[]>([]);
+  const [itemMappings, setItemMappings] = useState<Record<string, ItemMapping>>({});
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [savingItem, setSavingItem] = useState<string | null>(null);
 
   // Sync Settings State
   const [syncSettings, setSyncSettings] = useState({
@@ -312,31 +338,107 @@ export default function Settings() {
     price: '$99/month',
   };
 
-  const handleZraChange = (field: string, value: string) => {
-    setZraSettings(prev => ({ ...prev, [field]: value }));
+  // Fetch Xero items on component mount
+  useEffect(() => {
+    fetchXeroItems();
+  }, []);
+
+  const fetchXeroItems = async () => {
+    setLoadingItems(true);
+    try {
+      const response = await fetch(`${API_URL}/xero/items`, {
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (data.items) {
+        setXeroItems(data.items);
+        const initialMappings: Record<string, ItemMapping> = {};
+        data.items.forEach((item: XeroItem) => {
+          initialMappings[item.Code] = {
+            xero_item_code: item.Code,
+            zra_item_cd: item.Code,
+            zra_tax_ty_cd: item.TaxType === 'OUTPUT' ? 'B' : 'D',
+          };
+        });
+        setItemMappings(initialMappings);
+      }
+    } catch (error) {
+      console.error('Failed to fetch Xero items:', error);
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
+  const handleZraConfigChange = (field: string, value: string) => {
+    setZraConfig(prev => ({ ...prev, [field]: value }));
+  };
+
+  const saveZraConfig = async () => {
+    setConfigSaving(true);
+    try {
+      const response = await fetch(`${API_URL}/save-config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(zraConfig),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setSnackbar({ open: true, message: 'ZRA configuration saved successfully', severity: 'success' });
+      } else {
+        setSnackbar({ open: true, message: result.error || 'Failed to save ZRA config', severity: 'error' });
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Network error saving config', severity: 'error' });
+    } finally {
+      setConfigSaving(false);
+    }
+  };
+
+  const saveItemMapping = async (xeroItemCode: string) => {
+    const mapping = itemMappings[xeroItemCode];
+    if (!mapping) return;
+
+    setSavingItem(xeroItemCode);
+    try {
+      const response = await fetch(`${API_URL}/save-item-mapping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(mapping),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setItemMappings(prev => ({
+          ...prev,
+          [xeroItemCode]: { ...prev[xeroItemCode], saved: true },
+        }));
+        setSnackbar({ open: true, message: `Mapping saved for ${xeroItemCode}`, severity: 'success' });
+        setTimeout(() => {
+          setItemMappings(prev => ({
+            ...prev,
+            [xeroItemCode]: { ...prev[xeroItemCode], saved: false },
+          }));
+        }, 2000);
+      } else {
+        setSnackbar({ open: true, message: result.error || 'Failed to save mapping', severity: 'error' });
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Network error saving mapping', severity: 'error' });
+    } finally {
+      setSavingItem(null);
+    }
+  };
+
+  const updateMappingField = (xeroItemCode: string, field: string, value: string) => {
+    setItemMappings(prev => ({
+      ...prev,
+      [xeroItemCode]: { ...prev[xeroItemCode], [field]: value, saved: false },
+    }));
   };
 
   const handleSyncChange = (field: string, value: any) => {
     setSyncSettings(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSaveZraSettings = () => {
-    console.log('Saving ZRA settings:', zraSettings);
-    setSnackbar({ open: true, message: 'ZRA settings saved successfully', severity: 'success' });
-  };
-
-  const handleTestConnection = () => {
-    console.log('Testing ZRA connection...');
-    setTimeout(() => {
-      setSnackbar({ open: true, message: 'Connection successful! ZRA VSDC is reachable', severity: 'success' });
-    }, 1000);
-  };
-
-  const handleSyncNow = () => {
-    setSnackbar({ open: true, message: 'Sync initiated...', severity: 'success' });
-    setTimeout(() => {
-      setSnackbar({ open: true, message: 'Sync completed successfully', severity: 'success' });
-    }, 2000);
   };
 
   const handleSavePreferences = () => {
@@ -363,6 +465,7 @@ export default function Settings() {
     { label: 'Connections', icon: <LinkIcon /> },
     { label: 'ZRA Integration', icon: <CloudUploadIcon /> },
     { label: 'Sync & Notifications', icon: <SyncIcon /> },
+    { label: 'Item Mapping', icon: <LinkIcon /> },
     { label: 'Billing', icon: <BillingIcon /> },
   ];
 
@@ -456,7 +559,7 @@ export default function Settings() {
                   <Divider sx={{ my: 3 }} />
 
                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                    <Button variant="contained" startIcon={<SyncNowIcon />} onClick={handleSyncNow} sx={{ borderRadius: 2, textTransform: 'none' }}>
+                    <Button variant="contained" startIcon={<SyncNowIcon />} sx={{ borderRadius: 2, textTransform: 'none' }}>
                       Sync Now
                     </Button>
                     <Button variant="outlined" color="error" startIcon={<LinkIcon />} onClick={handleDisconnectClick} sx={{ borderRadius: 2, textTransform: 'none' }}>
@@ -485,45 +588,42 @@ export default function Settings() {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     <TextField
                       label="TPIN (Taxpayer Identification Number)"
-                      value={zraSettings.tpin}
-                      onChange={(e) => handleZraChange('tpin', e.target.value)}
+                      value={zraConfig.tpin}
+                      onChange={(e) => handleZraConfigChange('tpin', e.target.value)}
                       fullWidth
                       placeholder="Enter 10-digit TPIN"
                       helperText="Your ZRA-issued Taxpayer Identification Number"
+                      inputProps={{ maxLength: 10 }}
                     />
                     <TextField
                       label="Branch ID"
-                      value={zraSettings.branchId}
-                      onChange={(e) => handleZraChange('branchId', e.target.value)}
+                      value={zraConfig.bhfId}
+                      onChange={(e) => handleZraConfigChange('bhfId', e.target.value)}
                       fullWidth
                       placeholder="000"
                       helperText="Branch identifier (000 for head office)"
+                      inputProps={{ maxLength: 3 }}
                     />
                     <TextField
                       label="Device Serial Number"
-                      value={zraSettings.deviceSerial}
-                      onChange={(e) => handleZraChange('deviceSerial', e.target.value)}
+                      value={zraConfig.dvcSrlNo}
+                      onChange={(e) => handleZraConfigChange('dvcSrlNo', e.target.value)}
                       fullWidth
                       placeholder="Enter VSDC device serial"
                       helperText="VSDC device serial number from ZRA"
                     />
 
-                    <FormControl component="fieldset">
-                      <FormLabel component="legend">Environment</FormLabel>
-                      <RadioGroup row value={zraSettings.environment} onChange={(e) => handleZraChange('environment', e.target.value)}>
-                        <FormControlLabel value="sandbox" control={<Radio />} label="Sandbox (Testing)" />
-                        <FormControlLabel value="production" control={<Radio />} label="Production (Live)" />
-                      </RadioGroup>
-                    </FormControl>
-
                     <Divider />
 
                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      <Button variant="outlined" onClick={handleTestConnection} startIcon={<CheckCircleIcon />} sx={{ borderRadius: 2, textTransform: 'none' }}>
-                        Test Connection
-                      </Button>
-                      <Button variant="contained" onClick={handleSaveZraSettings} startIcon={<SaveIcon />} sx={{ borderRadius: 2, textTransform: 'none', bgcolor: theme.palette.secondary.main, color: theme.palette.primary.main }}>
-                        Save Settings
+                      <Button
+                        variant="contained"
+                        onClick={saveZraConfig}
+                        disabled={configSaving}
+                        startIcon={<SaveIcon />}
+                        sx={{ borderRadius: 2, textTransform: 'none', bgcolor: theme.palette.secondary.main, color: theme.palette.primary.main }}
+                      >
+                        {configSaving ? 'Saving...' : 'Save ZRA Configuration'}
                       </Button>
                     </Box>
                   </Box>
@@ -582,8 +682,109 @@ export default function Settings() {
             </AnimatedSection>
           )}
 
-          {/* Tab 4: Billing */}
+          {/* Tab 4: Item Mapping */}
           {activeTab === 3 && (
+            <AnimatedSection delay={0.1}>
+              <Card sx={{ borderRadius: 4, border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`, boxShadow: 'none', mb: 4 }}>
+                <CardContent sx={{ p: 4 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                    <Box sx={{ background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${alpha(theme.palette.primary.main, 0.7)})`, borderRadius: '50%', p: 1.5, display: 'inline-flex' }}>
+                      <LinkIcon sx={{ color: 'white', fontSize: 24 }} />
+                    </Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Item Mapping
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 3, display: 'block' }}>
+                    Map your Xero items to ZRA item codes and tax types. This is required before submitting invoices.
+                  </Typography>
+
+                  {loadingItems ? (
+                    <LinearProgress sx={{ borderRadius: 2 }} />
+                  ) : xeroItems.length === 0 ? (
+                    <Alert severity="info">No items found in your Xero account. Please add items in Xero first.</Alert>
+                  ) : (
+                    <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2, overflowX: 'auto' }}>
+                      <Table sx={{ minWidth: 600 }}>
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+                            <TableCell><strong>Xero Code</strong></TableCell>
+                            <TableCell><strong>Xero Name</strong></TableCell>
+                            <TableCell><strong>ZRA Item Code</strong></TableCell>
+                            <TableCell><strong>ZRA Tax Type</strong></TableCell>
+                            <TableCell align="center"><strong>Action</strong></TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {xeroItems.slice(0, 20).map((item) => {
+                            const mapping = itemMappings[item.Code];
+                            const isSaved = mapping?.saved;
+                            return (
+                              <TableRow
+                                key={item.Code}
+                                sx={{
+                                  backgroundColor: isSaved ? alpha('#10B981', 0.1) : 'transparent',
+                                  transition: 'background-color 0.3s ease',
+                                }}
+                              >
+                                <TableCell>
+                                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                                    {item.Code}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell>{item.Name}</TableCell>
+                                <TableCell>
+                                  <TextField
+                                    size="small"
+                                    value={mapping?.zra_item_cd || item.Code}
+                                    onChange={(e) => updateMappingField(item.Code, 'zra_item_cd', e.target.value)}
+                                    placeholder="ZRA item code"
+                                    sx={{ width: 150 }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                                    <Select
+                                      value={mapping?.zra_tax_ty_cd || 'B'}
+                                      onChange={(e) => updateMappingField(item.Code, 'zra_tax_ty_cd', e.target.value)}
+                                    >
+                                      <MenuItem value="A">A - Exempt</MenuItem>
+                                      <MenuItem value="B">B - Standard (16%)</MenuItem>
+                                      <MenuItem value="C1">C1 - Zero Rated</MenuItem>
+                                      <MenuItem value="D">D - Exempt/Other</MenuItem>
+                                    </Select>
+                                  </FormControl>
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => saveItemMapping(item.Code)}
+                                    disabled={savingItem === item.Code}
+                                    sx={{ borderRadius: 2, textTransform: 'none' }}
+                                  >
+                                    {savingItem === item.Code ? 'Saving...' : 'Save'}
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                  {xeroItems.length > 20 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+                      Showing first 20 of {xeroItems.length} items. Scroll to see more.
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </AnimatedSection>
+          )}
+
+          {/* Tab 5: Billing */}
+          {activeTab === 4 && (
             <AnimatedSection delay={0.1}>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 <Card sx={{ flex: 1, minWidth: 280, borderRadius: 4, border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`, boxShadow: 'none' }}>

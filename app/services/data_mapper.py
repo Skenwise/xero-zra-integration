@@ -1,4 +1,3 @@
-# app/services/data_mapper.py
 """
 Xero to ZRA Data Mapper
 Pure transformation layer: Xero Invoice → ZRA Sales Transaction
@@ -76,10 +75,15 @@ def _to_decimal(value: Any, default: Decimal = Decimal("0")) -> Decimal:
 
 
 def _to_int(value: Any, default: int = 0) -> int:
-    """Safely convert any value to int"""
+    """Safely convert any value to int, extracting numbers from strings like INV-0027"""
     if value is None:
         return default
     try:
+        # If it's a string, try to extract numbers
+        if isinstance(value, str):
+            numbers = re.findall(r'\d+', value)
+            if numbers:
+                return int(numbers[-1])  # Return the last number found
         return int(float(str(value)))
     except (ValueError, TypeError):
         return default
@@ -215,7 +219,7 @@ def map_xero_to_zra_sales(
         xero_description = line.get("Description", "") or ""
         
         if not xero_item_code:
-            xero_item_code = xero_description[:20] if xero_description else f"item_{idx}"
+            xero_item_code = f"item_{idx}"
         
         zra_item = item_mapping.get(xero_item_code)
         if not zra_item:
@@ -282,11 +286,14 @@ def map_xero_to_zra_sales(
     current_datetime = now.strftime("%Y%m%d%H%M%S")
     sales_date = _parse_xero_date(xero_invoice.get("Date")) or now.strftime("%Y%m%d")
     
+    # Extract invoice number properly
+    invc_no = _to_int(xero_invoice.get("InvoiceNumber"), 0)
+    
     zra_request = ZraSalesRequestSchema(
         # Header
         tpin=zra_config.get("tpin", ""),
         bhfId=zra_config.get("bhfId", "000"),
-        invcNo=_to_int(xero_invoice.get("InvoiceNumber"), 0),
+        invcNo=invc_no,
         orgInvcNo=0,
         
         # Customer
